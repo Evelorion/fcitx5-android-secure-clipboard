@@ -159,7 +159,7 @@
 
 ## 四、实测与交付
 
-- 构建：:app:assembleDebug 成功（arm64-v8a 69,819,756 字节，无 INTERNET 权限）；:app:assembleRelease 成功产出 release 签名发行包（arm64-v8a 54,681,710 字节，R8，无 INTERNET 权限，apksigner v1+v2 通过）；
+- 构建：:app:assembleDebug 成功（arm64-v8a 69,819,756 字节，无 INTERNET 权限）；:app:assembleRelease 成功产出 release 签名发行包（arm64-v8a 54,681,835 字节，R8，无 INTERNET 权限，apksigner v1+v2 通过）；
 - 单测：81 个安全剪贴板 JVM 单测全部通过；
 - 模拟器功能实测：通道 A/B、立即清空、旧明文迁移清库、隐私历史搜索、加密备份导出/导入；
 - 红队：零权限流氓 App 10 项攻击，私有库/IPC/Provider/日志/外部目录/伪造入口均被拦截；安全模式复制后剪贴板读空；
