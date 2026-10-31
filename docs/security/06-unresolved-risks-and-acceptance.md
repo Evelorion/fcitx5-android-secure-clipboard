@@ -22,7 +22,7 @@
 | 通道 A IME 入口 | `input/secureclipboard/{SelectedTextPolicy,SelectedTextCaptureController}.kt` + `KawaiiBarComponent` 盾牌/安全建议接线 | 已落地【S】 |
 | 粘贴 | `input/secureclipboard/{SecureClipboardPasteController,PasteSession}.kt` | 已落地【S】；已接入 `ClipboardWindow`（`ClipboardWindow.kt:98-121,220+`） |
 | 设置页 | `ui/main/settings/security/SecureClipboardSettingsFragment.kt`、`AppPrefs.Security`、路由/入口 | 已落地【S】 |
-| 测试 App | `tools/clipboard-probe/**`、`tools/rogue-clipboard-app/**` | 已落地【S】；两者 `assembleDebug` BUILD SUCCESSFUL，零权限，aapt 确认无 INTERNET（第 10 节） |
+| 测试 App | `内部测试探针**`、`内部红队工具**` | 已落地【S】；两者 `assembleDebug` BUILD SUCCESSFUL，零权限，aapt 确认无 INTERNET（第 10 节） |
 | instrumented 测试 | `app/src/androidTest/java/.../secureclipboard/{ClipboardSecurityInstrumentedTest,SecureClipboardStorageInstrumentedTest,SecureClipboardTestSupport,ClipboardProbeClient}.kt` | 已写入【S】；`:app:compileDebugAndroidTestKotlin` BUILD SUCCESSFUL，**未执行**（无设备） |
 | 单元测试 | `app/src/test/java/.../secureclipboard/{ClipboardCryptoTest,ClipboardEventProcessorTest,SecureClipboardMigrationTest,SecureClipboardPolicyTest,CryptoPerformanceBenchmarkTest}.kt` | 已落地【S】；维护者 执行 `:app:testDebugUnitTest`：**81 个安全剪贴板单测全部通过**（含 `SecureClipboardExportCryptoTest`）；更早全量运行中另 1 个为上游既有失败（详见第 10 节） |
 
@@ -49,10 +49,10 @@
 | 测试类别 | 计划/文件 | 执行状态 |
 | --- | --- | --- |
 | 12.1 功能测试 | T4 instrumented + 手工清单（见 05 第 6 节） | **未执行**（instrumented 仅编译通过；无设备） |
-| 12.2 安全测试（独立 probe App） | `tools/clipboard-probe/**` 代码存在且 APK 构建成功（零权限）；instrumented 测试已写入 | **已手工执行（模拟器）**：用 probe + adb 实测旧模式读取、安全模式加密+清空、后台转存、安全摘录不写剪贴板（见 08 §9 与 evidence/）；instrumented 自动化仍未跑 |
+| 12.2 安全测试（独立 probe App） | `内部测试探针**` 代码存在且 APK 构建成功（零权限）；instrumented 测试已写入 | **已手工执行（模拟器）**：用 probe + adb 实测旧模式读取、安全模式加密+清空、后台转存、安全摘录不写剪贴板（见 08 §9 与 evidence/）；instrumented 自动化仍未跑 |
 | 12.3 竞态测试 | JVM：`ClipboardEventProcessorTest`（15 个）；instrumented/手工仍未执行 | **JVM 部分已执行并通过**（15/15）；设备竞态未执行 |
 | 单元测试（加密/策略/迁移/事件处理/加密备份） | 上述测试类 + `SecureClipboardExportCryptoTest` | **已执行（维护者）**：81 个全部通过；更早全量运行中 1 个上游既有失败（ThemeSerializationTest.version2，与本改动无关） |
-| 构建 | 维护者 统一执行 | `:app:compileDebugKotlin`、`:app:compileDebugAndroidTestKotlin`、`:tools:clipboard-probe:assembleDebug`、`:app:assembleDebug` 均 BUILD SUCCESSFUL（APK 细节见第 10.1 节） |
+| 构建 | 维护者 统一执行 | `:app:compileDebugKotlin`、`:app:compileDebugAndroidTestKotlin`、`内部测试探针构建（已移除）`、`:app:assembleDebug` 均 BUILD SUCCESSFUL（APK 细节见第 10.1 节） |
 
 ## 3. 未解决风险清单
 
@@ -169,8 +169,8 @@
 | `:app:compileDebugKotlin` | **BUILD SUCCESSFUL** | Gradle 9.6.1 + AGP 9.4.1 + Kotlin 2.4.10，JDK 17 |
 | `:app:testDebugUnitTest` | **81 个安全剪贴板 JVM 单测全部通过**（含 20 个加密备份测试）；更早全量运行中 1 个失败 | 失败项为上游既有测试 `ThemeSerializationTest.version2`：它断言 version 2.0 不迁移，而 `CustomThemeSerializer.CURRENT_VERSION = "2.1"`（`app/src/main/java/org/fcitx/fcitx5/android/data/theme/CustomThemeSerializer.kt:90`；测试见 `app/src/test/java/org/fcitx/fcitx5/android/ThemeSerializationTest.kt:68`）。**既有失败、与本改动无关，不得写成“全部通过”** |
 | `:app:compileDebugAndroidTestKotlin` | **BUILD SUCCESSFUL** | instrumented 测试仅编译通过，**未执行**（无设备） |
-| `:tools:clipboard-probe:assembleDebug` | **BUILD SUCCESSFUL** | APK 962,872 字节；aapt 确认零权限（无 INTERNET） |
-| `:tools:rogue-clipboard-app:assembleDebug` | **BUILD SUCCESSFUL** | 红队攻击 App 982,453 字节；零权限、无 INTERNET |
+| `内部测试探针构建（已移除）` | **BUILD SUCCESSFUL** | APK 962,872 字节；aapt 确认零权限（无 INTERNET） |
+| `内部红队工具构建（已移除）` | **BUILD SUCCESSFUL** | 红队攻击 App 982,453 字节；零权限、无 INTERNET |
 | `:app:assembleDebug` | **BUILD SUCCESSFUL** | APK `app/build/outputs/apk/debug/org.fcitx.fcitx5.android-eb5b502-arm64-v8a-debug.apk`，69,819,756 字节，SHA-256 `D7C880B1D150937E24CF3057DF8B0D458A035B516270735B069CE69740ADE86B`；versionCode 112 / versionName eb5b502；aapt 确认仅 VIBRATE、POST_NOTIFICATIONS 与两个 signature 自定义权限（**无 INTERNET**）；apksigner 签名有效（CN=Android Debug）；manifest 含 SecureCaptureActivity / SecureShareReceiverActivity / SecureUnlockActivity；含 arm64-v8a 原生库。**未安装运行**。 |
 
 新增单测分布（合计 61）：`ClipboardCryptoTest` 17、`ClipboardEventProcessorTest` 15、`SecureClipboardPolicyTest` 17、`SecureClipboardMigrationTest` 10、`CryptoPerformanceBenchmarkTest` 2。

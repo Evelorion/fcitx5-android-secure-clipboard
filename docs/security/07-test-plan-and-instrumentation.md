@@ -2,7 +2,7 @@
 
 > 作者：T4 test-harness（安全剪贴板双通道项目）
 > 上游基线 commit：eb5b50216e70484a009933d9519db76005f1faf3。
-> 关联实现：app/src/main/java/org/fcitx/fcitx5/android/data/secureclipboard/**、data/clipboard/**、ui/securecapture/**、tools/clipboard-probe/**、app/src/androidTest/**
+> 关联实现：app/src/main/java/org/fcitx/fcitx5/android/data/secureclipboard/**、data/clipboard/**、ui/securecapture/**、内部测试探针**、app/src/androidTest/**
 > 关联文件：docs/security/00-architecture-and-file-ownership.md
 
 ## 0. 诚实声明（必读）
@@ -17,16 +17,16 @@ T4 受项目铁律约束**没有运行 Gradle**，本次会话内**也没有连�
 
 ## 1. 测试资产清单
 
-### 1.1 独立测试 App：tools/clipboard-probe
+### 1.1 独立测试 App：内部测试探针
 
 | 文件 | 作用 |
 | --- | --- |
-| tools/clipboard-probe/build.gradle.kts | 独立 Android application 模块（alias(libs.plugins.android.application)，不依赖 build-logic convention 插件），零第三方依赖、纯 Java、compileSdk 36 / minSdk 23 / targetSdk 36，applicationId 与 namespace 均为 org.fcitx.fcitx5.android.probe |
-| tools/clipboard-probe/src/main/AndroidManifest.xml | 不声明任何权限（尤其没有 INTERNET）；一个 Launcher Activity + 一个只读 ContentProvider |
+| 内部测试探针build.gradle.kts | 独立 Android application 模块（alias(libs.plugins.android.application)，不依赖 build-logic convention 插件），零第三方依赖、纯 Java、compileSdk 36 / minSdk 23 / targetSdk 36，applicationId 与 namespace 均为 org.fcitx.fcitx5.android.probe |
+| 内部测试探针src/main/AndroidManifest.xml | 不声明任何权限（尤其没有 INTERNET）；一个 Launcher Activity + 一个只读 ContentProvider |
 | .../probe/ProbeLog.java | 内存事件环形缓冲（最多 256 条）：时间戳、正文长度、MIME flags、事件发生时 probe 是否在前台；**不保存正文** |
 | .../probe/ProbeProvider.java | 导出的只读 ContentProvider（authority org.fcitx.fcitx5.android.probe.events），提供 status / events 查询与 clear / ensureListening / readCurrentClipboard 方法 |
 | .../probe/MainActivity.java | 手工测试 UI：a) 后台静默读取剪贴板长度；b) 显示最近 N 次事件；c) 判断最近是否有前台 App 写剪贴板 |
-| tools/clipboard-probe/README.md | 构建/安装/查询命令 |
+| 内部测试探针README.md | 构建/安装/查询命令 |
 
 设计约束：probe 与 :app **没有模块依赖关系**，需要单独安装；它只记录“剪贴板发生过变化”这一事实和时间/长度，
 不记录正文，因此即使被其他 App 读取 provider 也不会泄露剪贴板内容。probe 仅用于测试设备，不进入发布包。
@@ -51,7 +51,6 @@ T4 受项目铁律约束**没有运行 Gradle**，本次会话内**也没有连�
 
 settings.gradle.kts 末尾只追加了一行：
 
-    include(":tools:clipboard-probe")
 
 该模块**不是** :app 的依赖，不参与 app 打包；维护者 需要单独构建/安装它。
 
@@ -117,14 +116,13 @@ settings.gradle.kts 末尾只追加了一行：
 ### 4.1 构建
 
     .\\gradlew.bat :app:assembleDebug :app:assembleDebugAndroidTest "-PndkVersion=28.2.13676358" "-PcmakeVersion=3.22.1" "-PbuildTools=36.0.0" "-PbuildABI=arm64-v8a"
-    .\\gradlew.bat :tools:clipboard-probe:assembleDebug
+    .\\gradlew.bat 内部测试探针构建（已移除）
 
 （T4 未执行以上命令，构建是否通过以 维护者 的结果为准。）
 
 ### 4.2 安装到测试机
 
     adb install -r app\\build\\outputs\\apk\\debug\\app-debug.apk
-    adb install -r tools\\clipboard-probe\\build\\outputs\\apk\\debug\\clipboard-probe-debug.apk
     adb install -r app\\build\\outputs\\apk\\androidTest\\debug\\app-debug-androidTest.apk
 
 实际 APK 文件名以构建输出为准（app 模块 archivesName 可能带版本号）。确认测试包：
@@ -292,7 +290,7 @@ UI 路径：打开 app → 设置 → 隐私与安全（Privacy and security）�
 
 | # | 未执行项 | 原因 | 影响 |
 | --- | --- | --- | --- |
-| 1 | 运行 Gradle 构建（app / androidTest / :tools:clipboard-probe） | 项目铁律：T4 不运行 Gradle，由 维护者 统一构建 | 测试代码与 probe 模块是否编译通过未经 T4 验证 |
+| 1 | 运行 Gradle 构建（app / androidTest） | 项目铁律：T4 不运行 Gradle，由维护者统一构建 | 测试代码是否编译通过未经 T4 验证 |
 | 2 | 执行任何 instrumented 测试 | 本次会话未连接真机/模拟器 | 第 3 节所有 instrumented 行为只有代码级保证 |
 | 3 | 执行第 5 节全部 adb 手工步骤 | 同上 | 端到端用户路径未验证 |
 | 4 | Android 14/15/16 多版本与 OxygenOS/ColorOS 真机 | 无设备 | 兼容性结论为空 |
@@ -318,7 +316,7 @@ UI 路径：打开 app → 设置 → 隐私与安全（Privacy and security）�
 ## 8. 给 维护者 的验收 checklist
 
 - [ ] :app:assembleDebug 与 :app:assembleDebugAndroidTest 编译通过（包含本文件第 1.2 节 4 个测试文件）
-- [ ] :tools:clipboard-probe:assembleDebug 独立编译通过（不依赖 build-logic convention 插件）
+- [ ] 内部测试探针构建（已移除） 独立编译通过（不依赖 build-logic convention 插件）
 - [ ] 模拟器安装 probe 后，运行第 4.4 节命令，确认 assumption 跳过数量与失败数量均被记录
 - [ ] 按第 5 节至少执行步骤 2/5/6/11 四项（安全摘录、普通复制清空、私有粘贴、明文落盘）
 - [ ] 将实际执行结果回填到第 3 节状态列；未执行项保持“未执行”，不得默认写成通过
@@ -332,7 +330,7 @@ UI 路径：打开 app → 设置 → 隐私与安全（Privacy and security）�
 | --- | --- |
 | `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（arm64-v8a；另构建 x86_64 用于模拟器） |
 | `:app:assembleDebugAndroidTest` | ❌ 上游既有构建配置问题（`resValue` 的 debug 资源在 androidTest 资源链接不可见）；`:app:compileDebugAndroidTestKotlin` ✅ 已通过 |
-| `:tools:clipboard-probe:assembleDebug` | ✅ BUILD SUCCESSFUL，APK 962,872 字节，零权限 |
+| `内部测试探针构建（已移除）` | ✅ BUILD SUCCESSFUL，APK 962,872 字节，零权限 |
 | probe 是否被 :app 依赖 | 否（仅 `settings.gradle.kts` include 一行；`app/build.gradle.kts` 无引用） |
 | 第 5 节手工步骤 | 部分执行（模拟器，adb/uiautomator）：安全摘录 ✅、普通复制加密+立即清空 ✅、旧明文迁移清理 ✅、后台默认输入法转存 ✅；私有粘贴面板 UI 与锁屏/重启/Direct Boot 未执行 |
 | instrumented 运行 | ❌ 未执行（测试 APK 未安装运行） |

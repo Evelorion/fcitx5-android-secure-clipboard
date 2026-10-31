@@ -1,4 +1,4 @@
-pluginManagement {
+﻿pluginManagement {
     includeBuild("build-logic")
     repositories {
         gradlePluginPortal()
@@ -35,5 +35,3 @@ include(":plugin:chewing")
 include(":plugin:sayura")
 include(":plugin:jyutping")
 include(":plugin:thai")
-include(":tools:clipboard-probe")
-include(":tools:rogue-clipboard-app")

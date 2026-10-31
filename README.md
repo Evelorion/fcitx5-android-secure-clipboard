@@ -83,13 +83,12 @@
 
 - **81 个 JVM 单测**：crypto 17、事件状态机 15、策略 17、迁移 10、加密备份 20、桌面 AES 基准 2；
 - **androidTest 源码** 4 个文件（编译通过，未执行）；
-- tools/clipboard-probe：零权限测试探针（**仅测试用**）；
-- tools/rogue-clipboard-app：零权限红队攻击 App（**仅测试用**）；
+- 测试探针与红队 App 已从公开仓库与 Release 移除，不随分发提供。
 - docs/security/：源码审计、威胁模型、A–L 数据流隐私报告、性能/兼容说明、构建测试报告、红队报告、证据文件。
 
 ### 8. 构建/清单/配置变更
 
-- settings.gradle.kts 注册两个测试模块；
+- settings.gradle.kts 不再注册测试工具模块（已移除）；
 - AndroidManifest.xml 新增 4 个 Activity（SecureCapture/SecureShareReceiver/SecureUnlock/SecureHistory）；
 - 中英文 strings.xml 新增安全剪贴板文案；
 - Room schema app/schemas/...SecureClipboardDatabase/1.json。

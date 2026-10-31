@@ -36,8 +36,8 @@ BUILD SUCCESSFUL in 5m 58s
 | 1 | `:app:compileDebugKotlin` | **BUILD SUCCESSFUL** | 全部新增/修改 Kotlin 源码（含 Room KSP 生成）编译通过；最后记录 18s（增量） |
 | 2 | `:app:testDebugUnitTest` | **81 个安全剪贴板相关 JVM 单测全部通过**（含新增 20 个加密备份测试）；更早的全量运行中 1 个上游既有失败另计 | 详见第 4 节 |
 | 3 | `:app:compileDebugAndroidTestKotlin` | **BUILD SUCCESSFUL** | instrumented 测试源码编译通过（未运行） |
-| 4 | `:tools:clipboard-probe:assembleDebug` | **BUILD SUCCESSFUL** | 独立测试 App APK（零权限、无 INTERNET） |
-| 4b | `:tools:rogue-clipboard-app:assembleDebug` | **BUILD SUCCESSFUL** | 红队攻击 App APK 982,453 字节；零权限、无 INTERNET；仅测试设备使用 |
+| 4 | `内部测试探针构建（已移除）` | **BUILD SUCCESSFUL** | 独立测试 App APK（零权限、无 INTERNET） |
+| 4b | `内部红队工具构建（已移除）` | **BUILD SUCCESSFUL** | 红队攻击 App APK 982,453 字节；零权限、无 INTERNET；仅测试设备使用 |
 | 5 | `:app:assembleDebug` | **BUILD SUCCESSFUL** | 含完整 NDK/CMake 原生构建（fcitx5/libime/chinese-addons，arm64-v8a），产出主 APK |
 | 6 | `:app:assembleDebugAndroidTest` | **失败（上游既有资源配置问题，与本改动无关）** | 资源链接报缺 `mipmap/ic_launcher_debug`、`string/app_name_debug`：这些是 app 在 `buildTypes.debug` 里用 `resValue()` 生成的资源，androidTest 资源链接器不可见；属项目既有构建配置问题。instrumented **源码**编译（第 3 行）已通过 |
 
@@ -118,7 +118,7 @@ length(UTF-16 units) | avg(us) | min(us) | max(us) | MiB/s(round-trip)
 | 项目 | 状态 | 原因 |
 | --- | --- | --- |
 | instrumented 测试（`app/src/androidTest`） | **未执行**（仅编译通过） | 已有模拟器，但 instrumented 测试需要把测试 APK 一并安装运行；见第 9 节手工实测替代 |
-| 独立 probe App 与主 App 联合安全测试 | **已手工执行**（模拟器） | 用 `tools/clipboard-probe` 的 ContentProvider 设置剪贴板/读取长度，见第 9 节 |
+| 独立 probe App 与主 App 联合安全测试 | **已手工执行**（模拟器） | 用 内部测试探针 的 ContentProvider 设置剪贴板/读取长度，见第 9 节 |
 | adb 手工验证矩阵（07 文档第 4 节 12 步） | **部分执行**（模拟器） | 已执行：旧模式读取、安全模式加密+清空、后台默认输入法转存、安全摘录不写剪贴板；其余（锁屏、重启、Direct Boot、OEM）未执行 |
 | OxygenOS / ColorOS / Android 14/15/16 兼容性 | **未验证**（模拟器为 AOSP Android 16） | 无 OEM 设备 |
 | 真机性能/功耗（P50/P95/P99、CPU、内存、Doze） | **未测量** | 无真机；04 文档只给出方法与桌面 JVM 参考值 |
@@ -139,7 +139,7 @@ Set-Location '<本仓库根目录>'
 .\gradlew.bat :app:compileDebugKotlin --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
 .\gradlew.bat :app:testDebugUnitTest --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
 .\gradlew.bat :app:compileDebugAndroidTestKotlin --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
-.\gradlew.bat :tools:clipboard-probe:assembleDebug --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
+.\gradlew.bat 内部测试探针构建（已移除） --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
 .\gradlew.bat :app:assembleDebug --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0 -Pandroid.injected.signing.store.file=<本地 debug.keystore> -Pandroid.injected.signing.store.password=android -Pandroid.injected.signing.key.alias=androiddebugkey -Pandroid.injected.signing.key.password=android
 ```
 
@@ -189,7 +189,7 @@ Set-Location '<本仓库根目录>'
 
 ## 11. 红队“流氓 App”实测（2026-10-31 17:4x 补充）
 
-新增零权限测试模块 `tools/rogue-clipboard-app`（仅测试设备使用），从第三方 App 视角发起 10 种攻击；完整结果见 [09-rogue-app-red-team.md](09-rogue-app-red-team.md)。
+新增零权限测试模块 内部红队工具（仅测试设备使用），从第三方 App 视角发起 10 种攻击；完整结果见 [09-rogue-app-red-team.md](09-rogue-app-red-team.md)。
 
 | 攻击 | 安全模式结果 |
 | --- | --- |

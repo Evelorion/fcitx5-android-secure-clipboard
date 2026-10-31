@@ -373,7 +373,7 @@ Select-String -Path <本仓库根目录>\app\src\main\AndroidManifest.xml -Patte
 | 通道 A IME 入口 | `input/secureclipboard/{SelectedTextPolicy,SelectedTextCaptureController}.kt` + `KawaiiBarComponent` 盾牌/安全建议（T2 修改） | 104 / 151 行 |
 | 设置页 | `ui/main/settings/security/SecureClipboardSettingsFragment.kt` | 215 行 |
 | 单测 | `app/src/test/java/.../secureclipboard/{ClipboardCryptoTest,SecureClipboardPolicyTest,SecureClipboardMigrationTest,CryptoPerformanceBenchmarkTest}.kt` | 未执行 |
-| 测试 App | `tools/clipboard-probe/**` | 未执行 |
+| 测试 App | `内部测试探针**` | 未执行 |
 
 ### A.2 加密实现复核【S】
 
@@ -438,7 +438,7 @@ Select-String -Path <本仓库根目录>\app\src\main\AndroidManifest.xml -Patte
 - 编辑页：安全模式下禁用“复制到系统剪贴板”（`ClipboardEditActivity.kt:40,43,53-60`），并改为单条读取（约 86 行起）。
 - **发现【P】R21（新增）**：`ClipboardWindow` 构造 `SecureClipboardPasteController` 时 `authenticate = null`（约 99-100 行，TODO 注释称待 维护者 接入 T2 `SecureUnlockGate`）。因此在面板中启用“粘贴前要求设备认证”后，粘贴会以 `AuthenticationUnavailable` **失败关闭**（不会绕过认证，但功能不可用）；KawaiiBar 建议路径已接 `SecureUnlockGate`，两条路径行为不一致。
 - **发现【P】R22（新增）**：一次性“显示”对话框在 IME 窗口内展示完整明文（`revealSecureEntry`，约 244-271 行），未见 `FLAG_SECURE`；属用户主动显示，但截屏/录屏风险需在验收说明中披露。
-- T4：`app/src/androidTest/java/org/fcitx/fcitx5/android/data/secureclipboard/{ClipboardSecurityInstrumentedTest,SecureClipboardStorageInstrumentedTest,SecureClipboardTestSupport,ClipboardProbeClient}.kt` 已写入，**未执行**；探针 App `tools/clipboard-probe/**` 已写入，**未运行**。
+- T4：`app/src/androidTest/java/org/fcitx/fcitx5/android/data/secureclipboard/{ClipboardSecurityInstrumentedTest,SecureClipboardStorageInstrumentedTest,SecureClipboardTestSupport,ClipboardProbeClient}.kt` 已写入，**未执行**；探针 App `内部测试探针**` 已写入，**未运行**。
 - 因此 A.6/A.7 中“面板/粘贴 UI 未落地”的判断在 T2 快照已过时：改为“已落地（源码），未验证”；其余未完成事项（未构建、单测未跑、R4/R5/R14/R15 待确认）不变。
 - 行号说明：T2 快照中 `ClipboardWindow.kt` 已扩展安全模式逻辑，旧 T0 行号不再适用；当前文件的关键行号：`onShare` 129 行（安全记录禁用分享 129-133）、安全记录点击 `pasteSecureEntry` 159 行、非安全记录 `service.commitText(entry.text)` 162 行、`pasteSecureEntry` 定义 220 行、`revealSecureEntry` 定义 244 行（“显示”对话框 244-271）。本报告其余 T0 行号引用仍以基线 commit 的 `ClipboardWindow.kt` 为准。
 
@@ -453,8 +453,8 @@ Select-String -Path <本仓库根目录>\app\src\main\AndroidManifest.xml -Patte
 | `:app:compileDebugKotlin` | **BUILD SUCCESSFUL** | Gradle 9.6.1 + AGP 9.4.1 + Kotlin 2.4.10，JDK 17 |
 | `:app:testDebugUnitTest` | **81 个安全剪贴板 JVM 单测全部通过**（含 20 个加密备份测试）；更早全量运行中 1 个失败 | 失败为上游既有 `ThemeSerializationTest.version2`（测试 `app/src/test/java/org/fcitx/fcitx5/android/ThemeSerializationTest.kt:68` 断言 v2.0 不迁移，而 `CustomThemeSerializer.CURRENT_VERSION="2.1"`：`app/src/main/java/org/fcitx/fcitx5/android/data/theme/CustomThemeSerializer.kt:90`）；**既有失败、与本改动无关，不得写成“全部通过”** |
 | `:app:compileDebugAndroidTestKotlin` | **BUILD SUCCESSFUL** | instrumented 仅编译，**未执行**（无设备） |
-| `:tools:clipboard-probe:assembleDebug` | **BUILD SUCCESSFUL** | APK 962,872 字节；aapt 确认零权限（无 INTERNET） |
-| `:tools:rogue-clipboard-app:assembleDebug` | **BUILD SUCCESSFUL** | 红队攻击 App 982,453 字节；零权限、无 INTERNET；仅测试设备使用 |
+| `内部测试探针构建（已移除）` | **BUILD SUCCESSFUL** | APK 962,872 字节；aapt 确认零权限（无 INTERNET） |
+| `内部红队工具构建（已移除）` | **BUILD SUCCESSFUL** | 红队攻击 App 982,453 字节；零权限、无 INTERNET；仅测试设备使用 |
 | `:app:assembleDebug` | **BUILD SUCCESSFUL** | 含 NDK/CMake 原生构建（仅 arm64-v8a，NDK 28.0.13004108 + CMake 3.31.6）；APK `app/build/outputs/apk/debug/org.fcitx.fcitx5.android-eb5b502-arm64-v8a-debug.apk`，69,819,756 字节，SHA-256 `D7C880B1D150937E24CF3057DF8B0D458A035B516270735B069CE69740ADE86B`（最终构建）；versionCode 112 / versionName eb5b502 / minSdk 23 / targetSdk 36；aapt 确认仅 VIBRATE、POST_NOTIFICATIONS 与两个 signature 自定义权限（**无 INTERNET**）；apksigner 验证签名有效（CN=Android Debug）；manifest 含 SecureCaptureActivity（PROCESS_TEXT）、SecureShareReceiverActivity（ACTION_SEND）、SecureUnlockActivity（未导出）；APK 内含 arm64-v8a fcitx5/libime 原生库。**真机未安装运行**；另用同一源码构建 x86_64 APK 在 Android 16 模拟器上做了功能实测（见 B.5）。 |
 
 新增单测分布（61）：`ClipboardCryptoTest` 17、`ClipboardEventProcessorTest` 15、`SecureClipboardPolicyTest` 17、`SecureClipboardMigrationTest` 10、`CryptoPerformanceBenchmarkTest` 2。
@@ -465,7 +465,7 @@ Select-String -Path <本仓库根目录>\app\src\main\AndroidManifest.xml -Patte
 | --- | --- |
 | A.6 “T3 面板/编辑页改造未落地” | 已落地：`ClipboardWindow.kt:98-121,220+`（安全粘贴 + 认证 gate + reveal FLAG_SECURE 279-280）、`ClipboardEditActivity.kt:43,53-60`（安全模式禁用复制）、安全记录分享禁用（`ClipboardWindow.kt:129-133`） |
 | A.6 “T4 instrumented 未落地” | 已写入并编译通过：`app/src/androidTest/java/.../secureclipboard/{ClipboardSecurityInstrumentedTest,SecureClipboardStorageInstrumentedTest,SecureClipboardTestSupport,ClipboardProbeClient}.kt`；**未执行** |
-| A.6 “未构建、未跑测试” | `:app:compileDebugKotlin`、`:app:testDebugUnitTest`、`:app:compileDebugAndroidTestKotlin`、`:tools:clipboard-probe:assembleDebug`、`:app:assembleDebug` 均已由 维护者 执行（结果见 B.1） |
+| A.6 “未构建、未跑测试” | `:app:compileDebugKotlin`、`:app:testDebugUnitTest`、`:app:compileDebugAndroidTestKotlin`、`内部测试探针构建（已移除）`、`:app:assembleDebug` 均已由 维护者 执行（结果见 B.1） |
 | A.6 “R4/R5/R14/R15 待确认” | R5/R8/R10/R12/R14(部分)/R15(部分)/R16/R18/R21/R22 已修复（源码复核见 `06` 第 10.2 节）；R4 为产品决策保留 |
 
 ### B.3 审计结论的最终状态
@@ -483,7 +483,7 @@ Select-String -Path <本仓库根目录>\app\src\main\AndroidManifest.xml -Patte
 .\gradlew.bat :app:compileDebugKotlin
 .\gradlew.bat :app:testDebugUnitTest
 .\gradlew.bat :app:compileDebugAndroidTestKotlin
-.\gradlew.bat :tools:clipboard-probe:assembleDebug
+.\gradlew.bat 内部测试探针构建（已移除）
 .\gradlew.bat :app:assembleDebug -PbuildABI=arm64-v8a -PbuildTools=36.0.0
 ```
 
