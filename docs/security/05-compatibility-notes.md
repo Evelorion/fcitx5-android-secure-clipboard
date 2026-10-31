@@ -2,7 +2,7 @@
 
 # 05 兼容性说明（Android 14/15/16、OxygenOS/ColorOS 与系统限制）
 
-> 任务：T5，对应需求文档第八部分（8.1 适配范围、8.2 重点场景）与第十六部分“兼容性说明”。
+> 范围：对应需求文档第八部分（8.1 适配范围、8.2 重点场景）与第十六部分“兼容性说明”。
 > 快照：commit `eb5b502` + T0 工作树（2026-10-31）。**没有真机、没有模拟器运行记录、没有运行 Gradle。** 下表中凡涉及设备行为的结论一律“未验证”；平台 API 行为只写 Android 官方框架语义，不冒充本项目实测。
 > 证据标记：【S】源码确认、【L】Android 平台限制（框架语义，非本仓库源码）、【T】需真机测试（未验证）。
 
@@ -104,12 +104,12 @@
 9. **direct boot 与正常模式的存储域不同**（DPS vs CES），旧明文库可能分叉（本报告 01 第 2.4 节）。
 10. **严格模式默认禁用插件转换**：依赖 ClearURLs 等 transformer 的用户在安全模式下会失去 URL 清洗能力（功能取舍，需在设置页说明；已有 `secure_clipboard_allow_plugins_summary` 文案）。
 
-## 6. 兼容性测试执行清单（供 T4/Lead 使用）
+## 6. 兼容性测试执行清单（供 T4/维护者 使用）
 
 | 步骤 | 命令/操作 | 记录 |
 | --- | --- | --- |
 | 记录设备信息 | `adb shell getprop ro.product.model`、`ro.build.version.release`、`ro.build.version.security_patch`、OEM 版本 | 机型/系统/补丁日期 |
-| 安装 debug 包 | 由 Lead 统一构建（本任务不运行 Gradle） | 版本号、commit |
+| 安装 debug 包 | 由 维护者 统一构建（本任务不运行 Gradle） | 版本号、commit |
 | 设置默认输入法 | 系统设置/`adb shell ime set org.fcitx.fcitx5.android/.input.FcitxInputMethodService` | 是否成功 |
 | 基线回归 | 打字/候选/切换输入法/主题/剪贴板面板/编辑/分享 | 原有功能无破坏 |
 | 安全模式开 | 设置→隐私与安全→安全剪贴板 | 首次提示是否出现 |

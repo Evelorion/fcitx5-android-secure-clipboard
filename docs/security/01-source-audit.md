@@ -2,8 +2,8 @@
 
 # 01 源码审计报告（Fcitx5 for Android 剪贴板相关）
 
-> 任务：T5 审计与安全报告。本文只基于仓库真实源码与真实命令输出，不引用任何尚未落地的推测实现。
-> 审计对象：`D:\KEYBORD\src\fcitx5-android`（真实 GitHub 仓库），基线 commit `eb5b50216e70484a009933d9519db76005f1faf3`，外加审计时工作树中尚未提交的改造。
+> 范围：审计与安全报告。本文只基于仓库真实源码与真实命令输出，不引用任何尚未落地的推测实现。
+> 审计对象：`<本仓库根目录>`（真实 GitHub 仓库），基线 commit `eb5b50216e70484a009933d9519db76005f1faf3`，外加审计时工作树中尚未提交的改造。
 
 ## 0. 快照声明、方法与证据等级
 
@@ -12,7 +12,7 @@
 - `git rev-parse HEAD` = `eb5b50216e70484a009933d9519db76005f1faf3`，`git branch --show-current` = `master`，该 commit 时间为 2026-10-13 22:33:48 +0800。
 - `git remote -v`：`origin https://github.com/fcitx5-android/fcitx5-android.git`。
 - T0 时 `git status --porcelain` 显示：13 个已跟踪文件被修改（`AndroidManifest.xml`、`FcitxRemoteService.kt`、`core/Fcitx.kt`、`data/clipboard/ClipboardManager.kt`、`data/clipboard/db/{ClipboardDao,ClipboardEntry}.kt`、`data/prefs/AppPrefs.kt`、`ui/main/MainFragment.kt`、`ui/main/settings/SettingsRoute.kt`、`res/values/strings.xml`、`res/values-zh-rCN/strings.xml`、`res/xml/{data_extraction_rules,full_backup_content}.xml`），以及未跟踪目录/文件（`data/secureclipboard/`、`ui/main/settings/security/`、`res/drawable/ic_shield_24.xml`、`docs/`）。
-- 本仓库工作树在审计期间仍被其他任务（T1/T2/T3/Lead）持续修改。**本文第 0–7 节及附录 A 中标注 T0 的“引用行号”均为对应快照的行号**；最终集成后的构建/测试证据见**附录 B**，实现状态以附录 A/B 与 `06` 第 10 节为准。凡快照时尚不存在的实现，本文一律标注“未落地/未验证”，不编造。
+- 本仓库工作树在审计期间仍被其他任务（T1/T2/T3/维护者）持续修改。**本文第 0–7 节及附录 A 中标注 T0 的“引用行号”均为对应快照的行号**；最终集成后的构建/测试证据见**附录 B**，实现状态以附录 A/B 与 `06` 第 10 节为准。凡快照时尚不存在的实现，本文一律标注“未落地/未验证”，不编造。
 
 证据等级（全文统一使用）：
 
@@ -346,11 +346,11 @@ ecd23795ff7ea63a55a1b88fc4767946b999e102 lib/libime/src/main/cpp/libime
 ## 7. 复现/复核命令（本报告使用，未运行 Gradle）
 
 ```powershell
-git -C D:\KEYBORD\src\fcitx5-android rev-parse HEAD
-git -C D:\KEYBORD\src\fcitx5-android status --porcelain=v1
-git -C D:\KEYBORD\src\fcitx5-android submodule status --recursive
-Get-ChildItem -Recurse -Include *.kt D:\KEYBORD\src\fcitx5-android\app\src\main\java | Select-String -Pattern 'setPrimaryClip|primaryClip|commitText\('
-Select-String -Path D:\KEYBORD\src\fcitx5-android\app\src\main\AndroidManifest.xml -Pattern 'permission|exported|allowBackup'
+git -C <本仓库根目录> rev-parse HEAD
+git -C <本仓库根目录> status --porcelain=v1
+git -C <本仓库根目录> submodule status --recursive
+Get-ChildItem -Recurse -Include *.kt <本仓库根目录>\app\src\main\java | Select-String -Pattern 'setPrimaryClip|primaryClip|commitText\('
+Select-String -Path <本仓库根目录>\app\src\main\AndroidManifest.xml -Pattern 'permission|exported|allowBackup'
 ```
 
 > 说明：本文没有、也不能代替构建与真机测试。任何“已验证”“已通过”的结论都不在本文中；T0 未执行任何 Gradle 构建或 Android 测试。
@@ -391,7 +391,7 @@ Select-String -Path D:\KEYBORD\src\fcitx5-android\app\src\main\AndroidManifest.x
 - 去重：HMAC-SHA256(dedupKey, plaintext) 十六进制（`SecureClipboardPolicy.kt:50-75`）；去重命中只刷新 `createdAt`（`RepositoryImpl.kt:133-139`），不重新加密（与 AAD 不绑定 createdAt 一致）。
 - 读取：单条 `read(id)` 解密，失败（认证失败/密钥缺失/行不可读）返回 null（`RepositoryImpl.kt:172-194`）。
 - 元数据：`encryptedMetadata` 由独立随机 IV 加密，IV 前缀拼接（`SecureClipboardMetadata.kt:105-119`）；避免与 payload IV 复用。
-- 发现【P】R5：`save()` 构造默认 `historyLimit = SecureClipboardLimits.DEFAULT_HISTORY_LIMIT`（1000）（`RepositoryImpl.kt:45`），事务内按该值裁剪（`:153-157`）；而设置项允许到 5000（`AppPrefs.kt:418-426`）。若 Vault 未注入偏好值，设置 5000 实际会被 1000 截断——需 Lead/T1 确认并修复。
+- 发现【P】R5：`save()` 构造默认 `historyLimit = SecureClipboardLimits.DEFAULT_HISTORY_LIMIT`（1000）（`RepositoryImpl.kt:45`），事务内按该值裁剪（`:153-157`）；而设置项允许到 5000（`AppPrefs.kt:418-426`）。若 Vault 未注入偏好值，设置 5000 实际会被 1000 截断——需 维护者/T1 确认并修复。
 - 发现【P】R15：`realDelete()`/`clearAll()` 只执行 SQL DELETE，未 `VACUUM`/`secure_delete`（`RepositoryImpl.kt:281-283,311-313`），密文页可能残留（无密钥不可读，但“删除≠物理不存在”）。
 - 发现【P】R14：安全库降级到旧 schema 使用 `fallbackToDestructiveMigrationOnDowngrade(dropAllTables=true)`（`SecureClipboardDatabase.kt:31-39`），会清空密文历史；这是“避免崩溃”的取舍，需在验收中声明。
 - 发现【P】：`SecureClipboardPolicy.validate()` 默认拒绝 `sensitive=true` 的请求（`SecureClipboardPolicy.kt:31-47`）；IME 选区在 `IME_FLAG_NO_PERSONALIZED_LEARNING` 下会标记 sensitive（`SelectedTextPolicy.kt:93-94`），因此这条路径实际会返回 `SensitiveRejected`（按钮可用但保存失败）——符合“不自动收集敏感内容”，但 UI 提示与可用性需确认。
@@ -420,7 +420,7 @@ Select-String -Path D:\KEYBORD\src\fcitx5-android\app\src\main\AndroidManifest.x
 1. T3 面板/编辑页改造未落地：`input/clipboard/ClipboardWindow.kt:126-129` 仍直接 `commitText(entry.text)`；`ClipboardEditActivity.kt:47-55` 仍可把编辑内容写系统剪贴板；长按分享（`ClipboardWindow.kt:108-117`）未按安全模式禁用；`SecureClipboardPasteController` 文件未见到。
 2. T4 instrumented 测试未落地：安全测试用例未见到；probe App 代码存在但未运行。
 3. 未构建、未跑任何测试：本任务不运行 Gradle；T1 单测存在但未执行。
-4. 上述 R4/R5/R14/R15 与插件严格模式覆盖需 Lead 在最终集成时确认。
+4. 上述 R4/R5/R14/R15 与插件严格模式覆盖需 维护者 在最终集成时确认。
 
 ### A.7 复核结论
 
@@ -436,15 +436,15 @@ Select-String -Path D:\KEYBORD\src\fcitx5-android\app\src\main\AndroidManifest.x
 - T3 粘贴实现：`input/secureclipboard/{SecureClipboardPasteController.kt（107 行）,PasteSession.kt（42 行）}`；流程为捕获 `PasteSession` → 可选认证 → 单条 `readRecordText` → 再次校验会话 → `FcitxInputMethodService.commitText`；异常只记录类名（`SecureClipboardPasteController.kt:83-105`）。
 - 面板集成：`ClipboardWindow.kt` 安全记录走 `pasteSecureController.paste(id)`（约 92-102、220-238 行）；安全记录禁用分享（`onShare` 分支，约 129-133 行）；新增一次性“显示”对话框（`revealSecureEntry`，约 244-271 行）仅展示单条、不提供复制。
 - 编辑页：安全模式下禁用“复制到系统剪贴板”（`ClipboardEditActivity.kt:40,43,53-60`），并改为单条读取（约 86 行起）。
-- **发现【P】R21（新增）**：`ClipboardWindow` 构造 `SecureClipboardPasteController` 时 `authenticate = null`（约 99-100 行，TODO 注释称待 Lead 接入 T2 `SecureUnlockGate`）。因此在面板中启用“粘贴前要求设备认证”后，粘贴会以 `AuthenticationUnavailable` **失败关闭**（不会绕过认证，但功能不可用）；KawaiiBar 建议路径已接 `SecureUnlockGate`，两条路径行为不一致。
+- **发现【P】R21（新增）**：`ClipboardWindow` 构造 `SecureClipboardPasteController` 时 `authenticate = null`（约 99-100 行，TODO 注释称待 维护者 接入 T2 `SecureUnlockGate`）。因此在面板中启用“粘贴前要求设备认证”后，粘贴会以 `AuthenticationUnavailable` **失败关闭**（不会绕过认证，但功能不可用）；KawaiiBar 建议路径已接 `SecureUnlockGate`，两条路径行为不一致。
 - **发现【P】R22（新增）**：一次性“显示”对话框在 IME 窗口内展示完整明文（`revealSecureEntry`，约 244-271 行），未见 `FLAG_SECURE`；属用户主动显示，但截屏/录屏风险需在验收说明中披露。
 - T4：`app/src/androidTest/java/org/fcitx/fcitx5/android/data/secureclipboard/{ClipboardSecurityInstrumentedTest,SecureClipboardStorageInstrumentedTest,SecureClipboardTestSupport,ClipboardProbeClient}.kt` 已写入，**未执行**；探针 App `tools/clipboard-probe/**` 已写入，**未运行**。
 - 因此 A.6/A.7 中“面板/粘贴 UI 未落地”的判断在 T2 快照已过时：改为“已落地（源码），未验证”；其余未完成事项（未构建、单测未跑、R4/R5/R14/R15 待确认）不变。
 - 行号说明：T2 快照中 `ClipboardWindow.kt` 已扩展安全模式逻辑，旧 T0 行号不再适用；当前文件的关键行号：`onShare` 129 行（安全记录禁用分享 129-133）、安全记录点击 `pasteSecureEntry` 159 行、非安全记录 `service.commitText(entry.text)` 162 行、`pasteSecureEntry` 定义 220 行、`revealSecureEntry` 定义 244 行（“显示”对话框 244-271）。本报告其余 T0 行号引用仍以基线 commit 的 `ClipboardWindow.kt` 为准。
 
-## 附录 B：最终集成与真实构建/测试证据（Lead 执行，2026-10-31）
+## 附录 B：最终集成与真实构建/测试证据（维护者 执行，2026-10-31）
 
-> 本附录记录 Lead 在最终集成后执行的真实 Gradle 构建/测试结果（本任务未运行 Gradle；以下为 Lead 提供的原始结果）。它**取代附录 A.6/A.7 中“未构建/未测试/面板未落地”的时点性判断**。
+> 本附录记录 维护者 在最终集成后执行的真实 Gradle 构建/测试结果（本任务未运行 Gradle；以下为 维护者 提供的原始结果）。它**取代附录 A.6/A.7 中“未构建/未测试/面板未落地”的时点性判断**。
 
 ### B.1 构建与测试结果
 
@@ -465,7 +465,7 @@ Select-String -Path D:\KEYBORD\src\fcitx5-android\app\src\main\AndroidManifest.x
 | --- | --- |
 | A.6 “T3 面板/编辑页改造未落地” | 已落地：`ClipboardWindow.kt:98-121,220+`（安全粘贴 + 认证 gate + reveal FLAG_SECURE 279-280）、`ClipboardEditActivity.kt:43,53-60`（安全模式禁用复制）、安全记录分享禁用（`ClipboardWindow.kt:129-133`） |
 | A.6 “T4 instrumented 未落地” | 已写入并编译通过：`app/src/androidTest/java/.../secureclipboard/{ClipboardSecurityInstrumentedTest,SecureClipboardStorageInstrumentedTest,SecureClipboardTestSupport,ClipboardProbeClient}.kt`；**未执行** |
-| A.6 “未构建、未跑测试” | `:app:compileDebugKotlin`、`:app:testDebugUnitTest`、`:app:compileDebugAndroidTestKotlin`、`:tools:clipboard-probe:assembleDebug`、`:app:assembleDebug` 均已由 Lead 执行（结果见 B.1） |
+| A.6 “未构建、未跑测试” | `:app:compileDebugKotlin`、`:app:testDebugUnitTest`、`:app:compileDebugAndroidTestKotlin`、`:tools:clipboard-probe:assembleDebug`、`:app:assembleDebug` 均已由 维护者 执行（结果见 B.1） |
 | A.6 “R4/R5/R14/R15 待确认” | R5/R8/R10/R12/R14(部分)/R15(部分)/R16/R18/R21/R22 已修复（源码复核见 `06` 第 10.2 节）；R4 为产品决策保留 |
 
 ### B.3 审计结论的最终状态
@@ -477,7 +477,7 @@ Select-String -Path D:\KEYBORD\src\fcitx5-android\app\src\main\AndroidManifest.x
 - **不得对外宣称**：全量单测全部通过、真机/OEM 安全效果已验证、任何情况下都不写系统剪贴板、OxygenOS/ColorOS 兼容性已验证。
 - **可以宣称**：`:app:assembleDebug` 已成功产出 arm64-v8a debug APK（aapt/apksigner 检查通过）；同一源码的 x86_64 构建已在 Android 16 模拟器上实测通道 A/B、加密落库、立即清空系统剪贴板与旧明文迁移清理（B.5）；**真机仍未经运行验证**。
 
-### B.4 复核命令（Lead 已执行；本报告未自行运行）
+### B.4 复核命令（维护者 已执行；本报告未自行运行）
 
 ```powershell
 .\gradlew.bat :app:compileDebugKotlin
@@ -487,7 +487,7 @@ Select-String -Path D:\KEYBORD\src\fcitx5-android\app\src\main\AndroidManifest.x
 .\gradlew.bat :app:assembleDebug -PbuildABI=arm64-v8a -PbuildTools=36.0.0
 ```
 
-### B.5 模拟器功能实测（Lead，2026-10-31 17:00 后）
+### B.5 模拟器功能实测（维护者，2026-10-31 17:00 后）
 
 - 设备：AVD `Pixel_9_Pro_XL`，Android 16（API 36），x86_64；安装同源码构建的 x86_64 debug APK。
 - 结果：旧模式仍能读取系统剪贴板；安全模式普通复制加密落库后**立即清空系统剪贴板**；输入法在后台（仍为默认输入法）时也能转存；`ACTION_PROCESS_TEXT` 安全摘录确认→加密→落库且**全程不写系统剪贴板**；迁移后旧明文表 0 行；加密库主文件与 WAL 扫描不到明文。

@@ -1,7 +1,7 @@
 # 07 测试方案与 instrumented 测试
 
 > 作者：T4 test-harness（安全剪贴板双通道项目）
-> 仓库：D:\\KEYBORD\\src\\fcitx5-android（master eb5b502）
+> 上游基线 commit：eb5b50216e70484a009933d9519db76005f1faf3。
 > 关联实现：app/src/main/java/org/fcitx/fcitx5/android/data/secureclipboard/**、data/clipboard/**、ui/securecapture/**、tools/clipboard-probe/**、app/src/androidTest/**
 > 关联文件：docs/security/00-architecture-and-file-ownership.md
 
@@ -11,7 +11,7 @@
 T4 受项目铁律约束**没有运行 Gradle**，本次会话内**也没有连接真机或模拟器执行任何 instrumented 测试**。
 因此：
 
-- 所有构建结论（能否编译通过）由 Lead 统一构建时确认，T4 不声称“已编译通过”；
+- 所有构建结论（能否编译通过）由 维护者 统一构建时确认，T4 不声称“已编译通过”；
 - 所有 instrumented 测试、adb 手工步骤的执行结果一律标记为“未执行”，不得在验收报告里写成通过；
 - 只有 T1/T3 在本地 JVM 上实际跑过的单测，才能在验收时引用其结果（以他们的报告为准）。
 
@@ -43,7 +43,7 @@ T4 受项目铁律约束**没有运行 Gradle**，本次会话内**也没有连�
 补充说明：
 
 - 测试**不新增任何依赖**：只使用 app 已有的 androidTest 依赖（androidx.test:runner / rules、junit4）和 Android 平台 API；
-- 测试**不修改 app/src/main**（只读取 Lead 已固定的 Contract.kt / SecureClipboardVault.kt / ClipboardManager.kt 门面 API）；
+- 测试**不修改 app/src/main**（只读取 维护者 已固定的 Contract.kt / SecureClipboardVault.kt / ClipboardManager.kt 门面 API）；
 - 测试运行在 **app 进程内**（标准 AndroidJUnitRunner 行为），因此无法自动点击确认对话框，也无法模拟真实输入法会话；这两类场景见第 4 节手工步骤；
 - 所有依赖设备状态的用例使用 JUnit assume()：probe 未安装、vault 不可用（direct boot/Keystore 不可用）、安全模式关闭且未 opt-in、app 不是默认输入法时自动跳过，不判失败。
 
@@ -53,14 +53,14 @@ settings.gradle.kts 末尾只追加了一行：
 
     include(":tools:clipboard-probe")
 
-该模块**不是** :app 的依赖，不参与 app 打包；Lead 需要单独构建/安装它。
+该模块**不是** :app 的依赖，不参与 app 打包；维护者 需要单独构建/安装它。
 
 ## 2. 测试分层
 
 | 层 | 内容 | 执行者 | 本文件是否覆盖 |
 | --- | --- | --- | --- |
 | JVM 单元测试（app/src/test） | 加密算法、策略校验、迁移计数（T1）；事件状态机/竞态（T3，计划中） | T1 / T3（本地跑，不依赖设备） | 仅登记，不重复实现 |
-| Instrumented 测试（app/src/androidTest） | 真实 Room/Keystore/剪贴板/Activity 行为 | Lead 在模拟器/真机执行（T4 提供代码） | 是，见第 3/4 节 |
+| Instrumented 测试（app/src/androidTest） | 真实 Room/Keystore/剪贴板/Activity 行为 | 维护者 在模拟器/真机执行（T4 提供代码） | 是，见第 3/4 节 |
 | 手工 adb + probe | 端到端用户路径、IME 盾牌按钮、设备凭据、进程死亡、OEM 行为 | 测试人员按第 5 节执行 | 是，见第 5 节 |
 | 审计/静态检查 | 源码数据流、日志、备份、插件通路 | T5 报告 | 否（见 docs/security/01..06） |
 
@@ -112,14 +112,14 @@ settings.gradle.kts 末尾只追加了一行：
 | C-05 | 锁屏/重启后 Keystore 失效路径（KeyPermanentlyInvalidatedException） | 手工 | 改锁屏密码后读取旧记录 | 返回不可读/拒绝，不崩溃 | 未执行 |
 | C-06 | OEM（OxygenOS/ColorOS）后台存活与剪贴板回调差异 | 手工 | 真机 | 行为差异记录，不承诺常驻 | 未执行 |
 
-## 4. Instrumented 测试运行方法（Lead 执行）
+## 4. Instrumented 测试运行方法（维护者 执行）
 
 ### 4.1 构建
 
     .\\gradlew.bat :app:assembleDebug :app:assembleDebugAndroidTest "-PndkVersion=28.2.13676358" "-PcmakeVersion=3.22.1" "-PbuildTools=36.0.0" "-PbuildABI=arm64-v8a"
     .\\gradlew.bat :tools:clipboard-probe:assembleDebug
 
-（T4 未执行以上命令，构建是否通过以 Lead 的结果为准。）
+（T4 未执行以上命令，构建是否通过以 维护者 的结果为准。）
 
 ### 4.2 安装到测试机
 
@@ -292,7 +292,7 @@ UI 路径：打开 app → 设置 → 隐私与安全（Privacy and security）�
 
 | # | 未执行项 | 原因 | 影响 |
 | --- | --- | --- | --- |
-| 1 | 运行 Gradle 构建（app / androidTest / :tools:clipboard-probe） | 项目铁律：T4 不运行 Gradle，由 Lead 统一构建 | 测试代码与 probe 模块是否编译通过未经 T4 验证 |
+| 1 | 运行 Gradle 构建（app / androidTest / :tools:clipboard-probe） | 项目铁律：T4 不运行 Gradle，由 维护者 统一构建 | 测试代码与 probe 模块是否编译通过未经 T4 验证 |
 | 2 | 执行任何 instrumented 测试 | 本次会话未连接真机/模拟器 | 第 3 节所有 instrumented 行为只有代码级保证 |
 | 3 | 执行第 5 节全部 adb 手工步骤 | 同上 | 端到端用户路径未验证 |
 | 4 | Android 14/15/16 多版本与 OxygenOS/ColorOS 真机 | 无设备 | 兼容性结论为空 |
@@ -313,9 +313,9 @@ UI 路径：打开 app → 设置 → 隐私与安全（Privacy and security）�
 6. **logcat 检查**：不同 ROM 的日志缓冲区大小/过滤策略不同，最近 4000 行可能覆盖不到；测试前清空缓冲区并重复是关键。
 7. **probe 的 provider 无权限保护**：只暴露时间戳/长度/flags，不含正文；但仍是 exported 组件，仅应安装在测试设备（已在 README 与本文件注明）。
 8. **未覆盖的竞态**：A/B/C 连续复制的细粒度状态机断言在 T3 的 JVM 单测（ClipboardEventProcessorTest）中覆盖；instrumented 层只做冒烟（不崩溃、最终清空）。
-9. **APK 文件名与包名**：debug applicationId 带 .debug 后缀，测试包为 .debug.test；脚本中如与实际构建输出不一致需按 Lead 构建结果修正（本文件未实际执行验证）。
+9. **APK 文件名与包名**：debug applicationId 带 .debug 后缀，测试包为 .debug.test；脚本中如与实际构建输出不一致需按 维护者 构建结果修正（本文件未实际执行验证）。
 
-## 8. 给 Lead 的验收 checklist
+## 8. 给 维护者 的验收 checklist
 
 - [ ] :app:assembleDebug 与 :app:assembleDebugAndroidTest 编译通过（包含本文件第 1.2 节 4 个测试文件）
 - [ ] :tools:clipboard-probe:assembleDebug 独立编译通过（不依赖 build-logic convention 插件）
@@ -324,9 +324,9 @@ UI 路径：打开 app → 设置 → 隐私与安全（Privacy and security）�
 - [ ] 将实际执行结果回填到第 3 节状态列；未执行项保持“未执行”，不得默认写成通过
 - [ ] 确认 probe APK 不在发布产物中（settings.gradle.kts 只是 include，不是 :app 依赖）
 
-## 9. Lead 执行回填（2026-10-31）
+## 9. 维护者 执行回填（2026-10-31）
 
-> 本节由 Lead 在模拟器实测后补充；第 1–8 节中 instrumented 的“未执行”状态保持不变。
+> 本节由 维护者 在模拟器实测后补充；第 1–8 节中 instrumented 的“未执行”状态保持不变。
 
 | checklist | 结果 |
 | --- | --- |

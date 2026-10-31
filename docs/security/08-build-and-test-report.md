@@ -1,6 +1,6 @@
 # 08 真实构建与测试报告
 
-> 本文件记录 Lead 在 **2026-10-31** 于本机（Windows + Android SDK）对本次改造工作树实际执行的构建与测试。
+> 本文件记录 维护者 在 **2026-10-31** 于本机（Windows + Android SDK）对本次改造工作树实际执行的构建与测试。
 > 所有结果均来自真实命令输出，不含推测；未执行的项目在第 6 节明确列出。
 
 ## 1. 构建环境（实际值）
@@ -8,13 +8,13 @@
 | 项目 | 值 |
 | --- | --- |
 | OS | Windows（x64，中文系统） |
-| 仓库 | `D:\KEYBORD\src\fcitx5-android`（GitHub fcitx5-android master，commit `eb5b50216e70484a009933d9519db76005f1faf3`，含子模块） |
+| 仓库 | `<本仓库根目录>`（GitHub fcitx5-android master，commit `eb5b50216e70484a009933d9519db76005f1faf3`，含子模块） |
 | JDK | Temurin 17（`C:\Program Files\Java\jdk-17`），`JAVA_HOME` 显式指定 |
 | Gradle | 9.6.1（wrapper 自动下载） |
 | AGP / Kotlin / KSP | AGP 9.4.1 / Kotlin 2.4.10 / KSP 2.3.10（`gradle/libs.versions.toml`） |
 | Android SDK | compileSdk 36、buildTools 36.0.0（本机未装 36.1.0，故用 `-PbuildTools=36.0.0`） |
 | NDK / CMake | NDK 28.0.13004108（构建时由 AGP 自动安装）+ CMake 3.31.6 |
-| 原生构建额外依赖 | Windows 宿主需要 KDE ECM 与 gettext；本机使用最小化 ECM 包（`D:\KEYBORD\native-deps\ecm-install`）与 gettext 静态发行版（`D:\KEYBORD\native-deps\gettext`），仅作为**本机构建环境**，未写入仓库源码 |
+| 原生构建额外依赖 | Windows 宿主需要 KDE ECM 与 gettext；本机使用最小化 ECM 包（`<本地 ECM 安装>`）与 gettext 静态发行版（`<本地 gettext>`），仅作为**本机构建环境**，未写入仓库源码 |
 
 构建命令中的关键参数：`-PbuildABI=arm64-v8a`（只构建一个 ABI，节省时间）、`-PbuildTools=36.0.0`。原生构建通过环境变量获得 ECM/gettext：`ECM_DIR`、`PATH` 追加 gettext。
 
@@ -132,15 +132,15 @@ length(UTF-16 units) | avg(us) | min(us) | max(us) | MiB/s(round-trip)
 $env:JAVA_HOME='C:\Program Files\Java\jdk-17'
 $env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
 $env:ANDROID_SDK_ROOT="$env:LOCALAPPDATA\Android\Sdk"
-$env:ECM_DIR='D:\KEYBORD\native-deps\ecm-install\share\ECM\cmake'
-$env:PATH="D:\KEYBORD\native-deps\gettext\bin;" + $env:PATH
-Set-Location 'D:\KEYBORD\src\fcitx5-android'
+$env:ECM_DIR='<本地 ECM 安装>\share\ECM\cmake'
+$env:PATH="<本地 gettext>\bin;" + $env:PATH
+Set-Location '<本仓库根目录>'
 
 .\gradlew.bat :app:compileDebugKotlin --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
 .\gradlew.bat :app:testDebugUnitTest --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
 .\gradlew.bat :app:compileDebugAndroidTestKotlin --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
 .\gradlew.bat :tools:clipboard-probe:assembleDebug --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
-.\gradlew.bat :app:assembleDebug --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0 -Pandroid.injected.signing.store.file=D:/KEYBORD/debug.keystore -Pandroid.injected.signing.store.password=android -Pandroid.injected.signing.key.alias=androiddebugkey -Pandroid.injected.signing.key.password=android
+.\gradlew.bat :app:assembleDebug --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0 -Pandroid.injected.signing.store.file=<本地 debug.keystore> -Pandroid.injected.signing.store.password=android -Pandroid.injected.signing.key.alias=androiddebugkey -Pandroid.injected.signing.key.password=android
 ```
 
 > 在 Linux/macOS 或已安装 MSYS2/gettext 的机器上，只需把 ECM 与 gettext 的系统包装好，无需上述本机路径注入。

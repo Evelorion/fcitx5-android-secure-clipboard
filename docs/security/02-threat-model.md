@@ -2,7 +2,7 @@
 
 # 02 威胁模型（安全剪贴板）
 
-> 任务：T5。需求依据：项目需求文档第 1.3、4、5、6、7、9、10、17 节；架构依据：`docs/security/00-architecture-and-file-ownership.md` 与 `SecureClipboardContract.kt`。
+> 范围：需求依据：项目需求文档第 1.3、4、5、6、7、9、10、17 节；架构依据：`docs/security/00-architecture-and-file-ownership.md` 与 `SecureClipboardContract.kt`。
 > 事实依据：`01-source-audit.md` 中标注【S】的源码结论。本文不重复大段源码引用，关键点给路径。
 > 快照：commit `eb5b502` + T0 工作树（见 01 第 0 节）。T1/T2/T3 实现未落地，涉及它们的控制措施在本模型中标注“设计/待实现”。
 

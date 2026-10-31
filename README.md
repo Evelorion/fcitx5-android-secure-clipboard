@@ -167,9 +167,9 @@
 
     $env:JAVA_HOME='C:\Program Files\Java\jdk-17'
     $env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
-    $env:ECM_DIR='D:\KEYBORD\native-deps\ecm-install\share\ECM\cmake'
-    $env:PATH="D:\KEYBORD\native-deps\gettext\bin;" + $env:PATH
-    Set-Location 'D:\KEYBORD\src\fcitx5-android'
+    $env:ECM_DIR='<本地 ECM 安装>\share\ECM\cmake'
+    $env:PATH="<本地 gettext>\bin;" + $env:PATH
+    Set-Location '<本仓库根目录>'
     gradlew.bat :app:assembleDebug --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
 
 Release 中的 APK 为 **debug 签名测试构建**；仓库不含任何密钥。正式发布请用自己的 upload key 构建 release 变体，并用同一密钥构建插件。

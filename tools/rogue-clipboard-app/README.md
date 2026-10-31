@@ -34,7 +34,7 @@
 
 ## 2. 构建与安装
 
-Windows cmd / PowerShell（构建由 Lead 统一执行）：
+Windows cmd / PowerShell（构建由 维护者 统一执行）：
 
     gradlew.bat :tools:rogue-clipboard-app:assembleDebug
     adb install -r tools/rogue-clipboard-app/build/outputs/apk/debug/rogue-clipboard-app-debug.apk

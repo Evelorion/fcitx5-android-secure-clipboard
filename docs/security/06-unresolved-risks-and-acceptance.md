@@ -2,13 +2,13 @@
 
 # 06 未解决风险与验收状态
 
-> 任务：T5，对应需求文档第十二部分（安全测试）、第十六部分（交付要求）、第十七部分（最终验收标准）。
-> 快照：commit `eb5b502` + 工作树（2026-10-31）。**本任务自身未运行 Gradle；Lead 已完成集成并执行真实构建/单元测试（真实结果见第 10 节）。instrumented 测试仅编译通过、未执行；真机数据仍无。**
+> 范围：对应需求文档第十二部分（安全测试）、第十六部分（交付要求）、第十七部分（最终验收标准）。
+> 快照：commit `eb5b502` + 工作树（2026-10-31）。**本任务自身未运行 Gradle；维护者 已完成集成并执行真实构建/单元测试（真实结果见第 10 节）。instrumented 测试仅编译通过、未执行；真机数据仍无。**
 > 证据标记：【S】源码确认、【P】潜在风险、【T】需测试（未验证）。
 
 ## 0. 实现落地状态（验收的前提）
 
-> 本表是“是否具备验收条件”的事实基础；文件存在不等于可编译、更不等于已验证。构建/测试结果以 Lead 统一执行的结果为准。
+> 本表是“是否具备验收条件”的事实基础；文件存在不等于可编译、更不等于已验证。构建/测试结果以 维护者 统一执行的结果为准。
 
 | 模块 | 文件（T1 快照） | 状态 |
 | --- | --- | --- |
@@ -24,7 +24,7 @@
 | 设置页 | `ui/main/settings/security/SecureClipboardSettingsFragment.kt`、`AppPrefs.Security`、路由/入口 | 已落地【S】 |
 | 测试 App | `tools/clipboard-probe/**`、`tools/rogue-clipboard-app/**` | 已落地【S】；两者 `assembleDebug` BUILD SUCCESSFUL，零权限，aapt 确认无 INTERNET（第 10 节） |
 | instrumented 测试 | `app/src/androidTest/java/.../secureclipboard/{ClipboardSecurityInstrumentedTest,SecureClipboardStorageInstrumentedTest,SecureClipboardTestSupport,ClipboardProbeClient}.kt` | 已写入【S】；`:app:compileDebugAndroidTestKotlin` BUILD SUCCESSFUL，**未执行**（无设备） |
-| 单元测试 | `app/src/test/java/.../secureclipboard/{ClipboardCryptoTest,ClipboardEventProcessorTest,SecureClipboardMigrationTest,SecureClipboardPolicyTest,CryptoPerformanceBenchmarkTest}.kt` | 已落地【S】；Lead 执行 `:app:testDebugUnitTest`：**81 个安全剪贴板单测全部通过**（含 `SecureClipboardExportCryptoTest`）；更早全量运行中另 1 个为上游既有失败（详见第 10 节） |
+| 单元测试 | `app/src/test/java/.../secureclipboard/{ClipboardCryptoTest,ClipboardEventProcessorTest,SecureClipboardMigrationTest,SecureClipboardPolicyTest,CryptoPerformanceBenchmarkTest}.kt` | 已落地【S】；维护者 执行 `:app:testDebugUnitTest`：**81 个安全剪贴板单测全部通过**（含 `SecureClipboardExportCryptoTest`）；更早全量运行中另 1 个为上游既有失败（详见第 10 节） |
 
 ## 1. 需求 17 验收标准逐条状态
 
@@ -51,8 +51,8 @@
 | 12.1 功能测试 | T4 instrumented + 手工清单（见 05 第 6 节） | **未执行**（instrumented 仅编译通过；无设备） |
 | 12.2 安全测试（独立 probe App） | `tools/clipboard-probe/**` 代码存在且 APK 构建成功（零权限）；instrumented 测试已写入 | **已手工执行（模拟器）**：用 probe + adb 实测旧模式读取、安全模式加密+清空、后台转存、安全摘录不写剪贴板（见 08 §9 与 evidence/）；instrumented 自动化仍未跑 |
 | 12.3 竞态测试 | JVM：`ClipboardEventProcessorTest`（15 个）；instrumented/手工仍未执行 | **JVM 部分已执行并通过**（15/15）；设备竞态未执行 |
-| 单元测试（加密/策略/迁移/事件处理/加密备份） | 上述测试类 + `SecureClipboardExportCryptoTest` | **已执行（Lead）**：81 个全部通过；更早全量运行中 1 个上游既有失败（ThemeSerializationTest.version2，与本改动无关） |
-| 构建 | Lead 统一执行 | `:app:compileDebugKotlin`、`:app:compileDebugAndroidTestKotlin`、`:tools:clipboard-probe:assembleDebug`、`:app:assembleDebug` 均 BUILD SUCCESSFUL（APK 细节见第 10.1 节） |
+| 单元测试（加密/策略/迁移/事件处理/加密备份） | 上述测试类 + `SecureClipboardExportCryptoTest` | **已执行（维护者）**：81 个全部通过；更早全量运行中 1 个上游既有失败（ThemeSerializationTest.version2，与本改动无关） |
+| 构建 | 维护者 统一执行 | `:app:compileDebugKotlin`、`:app:compileDebugAndroidTestKotlin`、`:tools:clipboard-probe:assembleDebug`、`:app:assembleDebug` 均 BUILD SUCCESSFUL（APK 细节见第 10.1 节） |
 
 ## 3. 未解决风险清单
 
@@ -64,7 +64,7 @@
 | R1 | TOCTOU：加密落库与清空之间系统剪贴板可能已被改写；无法原子 compare-and-clear | 高 | 接受（平台限制） | 需求 4.4/8.2；实现用落库后重读比较 + 序号 + 去重把窗口缩到最小（`ClipboardEventProcessor.kt:438-503`） | 保持重读比较；测试 A/B/C 连续复制；不承诺零窗口 |
 | R2 | 进程被杀/未解锁/后台限制时通道 B 无法转存或清空 | 高 | 接受（平台限制） | 需求 8.2；监听依赖进程存活（01 第 3.11 节） | 明确 UI 状态；不做常驻/轮询/无障碍 |
 | R3 | 系统剪贴板短暂明文 + OEM 剪贴板历史/预览可能保留副本 | 高 | 接受（平台限制） | 需求 10.1/10.2；`clearPrimaryClip()` API 28+（`SecureClipboardController.kt:226-238`） | 加密成功后立刻清空（已实现）；兼容模式明确提示 |
-| R4 | 敏感标记内容（`EXTRA_IS_SENSITIVE`）在安全模式下既不保存也不清空 | 中 | **产品决策保留（非缺陷）** | `SecureClipboardController.kt:188-190,211-224`：敏感剪贴板被判 Unsupported，处理路径不清空（`ClipboardEventProcessor.kt:379-385`）；Lead 决策：不保存也不清空，避免删除唯一原文 | 文档写明该取舍；如需改为“尝试清空”需产品重新决策 |
+| R4 | 敏感标记内容（`EXTRA_IS_SENSITIVE`）在安全模式下既不保存也不清空 | 中 | **产品决策保留（非缺陷）** | `SecureClipboardController.kt:188-190,211-224`：敏感剪贴板被判 Unsupported，处理路径不清空（`ClipboardEventProcessor.kt:379-385`）；维护者 决策：不保存也不清空，避免删除唯一原文 | 文档写明该取舍；如需改为“尝试清空”需产品重新决策 |
 | R5 | 历史上限 1000（旧默认）与设置上限 5000 不一致 | 中 | **已修复（源码复核）** | `SecureClipboardVault.kt:31-41` 注入 `historyLimitProvider = { AppPrefs...secureClipboardHistoryLimit }`；`SecureClipboardRepositoryImpl.kt:45,156` 每次 save 读取 `historyLimitProvider()` 并按 `MAX_HISTORY_LIMIT` 收敛 | 已无固定 1000 截断；JVM 单测覆盖策略，设备行为未验证 |
 | R6 | 旧明文库/密文库删除后存在 SQLite 页/WAL/闪存物理残留 | 高 | 接受（物理限制） | 迁移用 `secure_delete=ON + DELETE + VACUUM + wal_checkpoint(TRUNCATE)`（`ClipboardManager.kt:420-428`）；安全库 `realDelete/clearAll` 未执行 VACUUM（`SecureClipboardRepositoryImpl.kt:281-283,311-313`） | 安全库删除后可加 `PRAGMA secure_delete`/VACUUM；SSD/UFS 物理残留无法保证 |
 | R7 | Keystore 密钥丢失/失效后历史永久不可读；不静默重建密钥 | 高 | 接受（设计） | `ClipboardKeyManager.kt:102-140`（KeyInvalid/KeyUnavailable）；需求 5.5 | UI 明确报告不可解密；提供清空/重建入口 |
@@ -100,10 +100,10 @@
 | 插件崩溃/死亡 | `linkToDeath` 注销；异常只记录描述/类名 | `FcitxRemoteService.kt:96-114` | 不残留明文日志；下次注册恢复 |
 | 如何验证 | 构建同签名测试插件记录 transform 入参长度（不记内容）；在严格模式/兼容模式/关闭安全模式三种状态实测 | T4/T5 计划 | 未执行 |
 
-## 6. 验收必需的后续动作（交给 Lead/T4）
+## 6. 验收必需的后续动作（交给 维护者/T4）
 
-1. ~~构建：Lead 统一执行 compileDebugKotlin 与单测~~ **已完成（Lead）**：见第 10 节；`:app:assembleDebug` 亦已成功产出 arm64-v8a APK（未安装运行）。
-2. ~~单元测试~~ **已完成（Lead）**：81 个安全剪贴板单测全部通过；更早全量运行中 1 个上游既有失败（ThemeSerializationTest.version2，与本改动无关），不得写成“全量全部通过”。
+1. ~~构建：维护者 统一执行 compileDebugKotlin 与单测~~ **已完成（维护者）**：见第 10 节；`:app:assembleDebug` 亦已成功产出 arm64-v8a APK（未安装运行）。
+2. ~~单元测试~~ **已完成（维护者）**：81 个安全剪贴板单测全部通过；更早全量运行中 1 个上游既有失败（ThemeSerializationTest.version2，与本改动无关），不得写成“全量全部通过”。
 3. T3 收尾：面板/编辑页安全模式改造、PasteController 落地、分享禁用；否则第 4 项验收（安全粘贴）不完整。
 4. T4 仪器测试/真机：按 05 矩阵与需求 12.2/12.3 执行；probe App 验证“安全摘录/私有粘贴不写剪贴板”。
 5. 数据库明文扫描：设备上导出 `secure_clbdb` 并搜索测试明文；旧 `clbdb` 迁移后同样检查。
@@ -134,7 +134,7 @@
 | `docs/security/05-compatibility-notes.md` | 版本/OEM/场景矩阵/系统限制 | 已完成 |
 | `docs/security/06-unresolved-risks-and-acceptance.md` | 需求 17 验收逐条、风险、擦除残留、插件策略 | 已完成 |
 
-最终声明（更新）：构建与 JVM 单测已有真实证据（第 10 节），但 instrumented 测试与真机验证仍未执行；凡本目录未明确标注“Lead 构建/测试记录”的安全效果，仍只能标记为“设计/实现/未验证”。
+最终声明（更新）：构建与 JVM 单测已有真实证据（第 10 节），但 instrumented 测试与真机验证仍未执行；凡本目录未明确标注“维护者 构建/测试记录”的安全效果，仍只能标记为“设计/实现/未验证”。
 
 ## 9. T2 快照增量（T3 粘贴/面板与 T4 测试文件落地后）
 
@@ -156,11 +156,11 @@
 - **新增风险**：
   - R21：**已修复（源码复核）**——`ClipboardWindow.kt:98-121` 已接 `SecureUnlockGate`（120s 超时、fail-closed）；`SecureClipboardPasteController.kt:65-106` 在认证后重新捕获会话再解密。
   - R22：**已修复（源码复核）**——`ClipboardWindow.kt:279-280` 给 reveal 对话框加 `FLAG_SECURE`；仍属用户主动显示明文的操作，需在验收说明中披露。
-- **仍需 Lead/T4 执行**：构建、单测、instrumented 测试、真机矩阵、数据库明文扫描、备份/导出验证（同第 6 节）。
+- **仍需 维护者/T4 执行**：构建、单测、instrumented 测试、真机矩阵、数据库明文扫描、备份/导出验证（同第 6 节）。
 
-## 10. 最终集成与真实构建/测试证据（Lead 执行）
+## 10. 最终集成与真实构建/测试证据（维护者 执行）
 
-> 证据来源：Lead 在 2026-10-31 集成后执行的真实 Gradle 构建与测试记录（本任务未运行 Gradle；以下数字为 Lead 提供，原样引用）。
+> 证据来源：维护者 在 2026-10-31 集成后执行的真实 Gradle 构建与测试记录（本任务未运行 Gradle；以下数字为 维护者 提供，原样引用）。
 
 ### 10.1 构建结果
 
@@ -175,7 +175,7 @@
 
 新增单测分布（合计 61）：`ClipboardCryptoTest` 17、`ClipboardEventProcessorTest` 15、`SecureClipboardPolicyTest` 17、`SecureClipboardMigrationTest` 10、`CryptoPerformanceBenchmarkTest` 2。
 
-### 10.2 Lead 修复复核（源码确认）
+### 10.2 维护者 修复复核（源码确认）
 
 | 风险 | 状态 | 源码证据 |
 | --- | --- | --- |

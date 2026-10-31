@@ -2,13 +2,13 @@
 
 # 04 性能与耗电评估
 
-> 任务：T5，对应需求文档第十一部分（11.1 优化、11.2 指标、11.3 验收）。
-> 快照：commit `eb5b502` + 工作树（2026-10-31）。**本任务未运行 Gradle/benchmark；Lead 已执行构建与 JVM 单测，其中桌面 JVM AES-GCM 参考基准见附录 B（非设备）。没有任何真机数据。** 本文指标定义与设备测量方法中的数值一律标注“未验证/待测”，不编造延迟。
+> 范围：对应需求文档第十一部分（11.1 优化、11.2 指标、11.3 验收）。
+> 快照：commit `eb5b502` + 工作树（2026-10-31）。**本任务未运行 Gradle/benchmark；维护者 已执行构建与 JVM 单测，其中桌面 JVM AES-GCM 参考基准见附录 B（非设备）。没有任何真机数据。** 本文指标定义与设备测量方法中的数值一律标注“未验证/待测”，不编造延迟。
 > 证据标记：【S】源码确认、【D】设计目标、【T】需测试（未验证）。
 
 ## 1. 现状与结论先行
 
-1. **没有设备端性能数据**：实现已落地且 Lead 执行了 JVM 基准（附录 B），但加密→事务→清空→端到端的设备耗时、CPU、内存、功耗、启动时间全部未测；本报告不提供任何设备端实测数字。
+1. **没有设备端性能数据**：实现已落地且 维护者 执行了 JVM 基准（附录 B），但加密→事务→清空→端到端的设备耗时、CPU、内存、功耗、启动时间全部未测；本报告不提供任何设备端实测数字。
 2. **现有基线是“事件驱动、无轮询”**：剪贴板监听来自系统 `OnPrimaryClipChangedListener` 回调（`data/clipboard/ClipboardManager.kt:452-493`），没有定时任务、没有前台服务、没有后台轮询【S】。
 3. **现有实现已避免在系统回调线程做重活**：旧监听器在回调里只取 `primaryClip`，随后 `launch { mutex.withLock { ... } }` 把解析/DB 放到协程（`ClipboardManager.kt:452-493`）【S】。
 4. **列表不做整库解密**：安全模式列表通过 `SecureDisplayPagingSource` 映射密文行、不调用解密（`ClipboardManager.kt:284-293,531-554`）【S（门面层）】。
@@ -121,18 +121,18 @@ adb shell perfetto -o /data/misc/perfetto-traces/clipboard.pftrace -t 10s sched 
 
 1. 需求 11.3 的“短文本 1 秒内”只能作为**设计目标**；验收时至少给出 P50/P95/P99 与测试机型/系统版本（见 05）。
 2. 若没有真机数据，验收文档必须写“未验证”，**不得声称延迟已达标**。
-3. 性能回归的门槛建议：安全模式开关前后，键盘首帧与候选响应差异在可接受范围（具体阈值由 Lead 与实测基线确定，本报告不预设数字）。
+3. 性能回归的门槛建议：安全模式开关前后，键盘首帧与候选响应差异在可接受范围（具体阈值由 维护者 与实测基线确定，本报告不预设数字）。
 4. 功耗结论必须基于整晚对照实验；仅凭“无轮询”不能证明省电。
 
 ## 附录：T1 快照增量
 
-- T1 已提交 JVM 性能基准测试 `app/src/test/java/.../CryptoPerformanceBenchmarkTest.kt`（**Lead 已执行，2 个基准测试通过**，数字见附录 B；只代表桌面 JVM，不能替代真机端到端数据）。
+- T1 已提交 JVM 性能基准测试 `app/src/test/java/.../CryptoPerformanceBenchmarkTest.kt`（**维护者 已执行，2 个基准测试通过**，数字见附录 B；只代表桌面 JVM，不能替代真机端到端数据）。
 - 仓库 `save()` 的 historyLimit 已改为每次读取偏好（`SecureClipboardVault.kt:31-41` 注入 `historyLimitProvider`；`SecureClipboardRepositoryImpl.kt:45,156`），`06` R5 已修复；性能测试时仍需记录该设置值，避免不同配置导致数据不可比。
 - 通道 B 控制器/状态机已落地（`SecureClipboardController.kt`、`ClipboardEventProcessor.kt`），P4/P5 埋点位置可确定；JVM 侧仅有附录 B 的加密原语参考值，**没有任何设备端实测数字**。
 
-## 附录 B：桌面 JVM AES-256-GCM 参考基准（Lead 实测，非设备）
+## 附录 B：桌面 JVM AES-256-GCM 参考基准（维护者 实测，非设备）
 
-> 来源：Lead 执行 `:app:testDebugUnitTest` 时 `CryptoPerformanceBenchmarkTest` 的 system-out（新增 JVM 单测中的 2 个，均通过；该批次 61 个，后续加密备份测试加入后共 81 个）。本任务未运行 Gradle，以下数字原样引用，**仅代表桌面 JVM**。
+> 来源：维护者 执行 `:app:testDebugUnitTest` 时 `CryptoPerformanceBenchmarkTest` 的 system-out（新增 JVM 单测中的 2 个，均通过；该批次 61 个，后续加密备份测试加入后共 81 个）。本任务未运行 Gradle，以下数字原样引用，**仅代表桌面 JVM**。
 > **重要**：这不是设备端指标，也不是端到端指标。不得把下表的耗时写成 Android 真机/Android Keystore/Room 端到端结果。
 
 ### B.1 测试方法（源码确认）
@@ -173,4 +173,4 @@ adb shell perfetto -o /data/misc/perfetto-traces/clipboard.pftrace -t 10s sched 
 | P7/P8/P9/P10/P11 | 不能覆盖 | CPU/内存/功耗/启动/候选响应全部需真机 |
 | P12 文本长度梯度 | 部分：JVM 10–100k 梯度 | 设备梯度、内存峰值、超长策略端到端 |
 
-**结论**：Lead 已提供**桌面 JVM 参考基准**（2 个基准测试通过），可作为加密原语成本的 sanity check；但第 2 节定义的所有设备端指标（P1、P3–P11 及 P2 的设备部分）仍为“未验证”，本报告不据此声称性能达标。
+**结论**：维护者 已提供**桌面 JVM 参考基准**（2 个基准测试通过），可作为加密原语成本的 sanity check；但第 2 节定义的所有设备端指标（P1、P3–P11 及 P2 的设备部分）仍为“未验证”，本报告不据此声称性能达标。

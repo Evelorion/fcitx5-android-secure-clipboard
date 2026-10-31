@@ -1,7 +1,7 @@
 # 安全剪贴板（双通道）——实现架构与文件所有权
 
-> 本文件是团队内部实现契约。需求来源：`C:\\Users\\Alart\\Desktop\\新增 Microsoft Word 文件 (2).docx`。
-> 仓库：`D:\\KEYBORD\\src\\fcitx5-android`（master, commit `eb5b50216e70484a009933d9519db76005f1faf3`）。
+> 本文描述本仓库的实现架构与文件所有权（不含本机路径与内部协作信息）。
+> 上游基线 commit：eb5b50216e70484a009933d9519db76005f1faf3。
 
 ## 0. 基线事实（源码确认）
 
@@ -32,14 +32,14 @@
 
 ```
 data/secureclipboard/
-  SecureClipboardContract.kt          [Lead 已写] 共享模型/接口/常量/状态
+  SecureClipboardContract.kt          [维护者 已写] 共享模型/接口/常量/状态
   crypto/ClipboardCrypto.kt           [T1] AES-256-GCM（可注入 SecretKey，纯 JVM 可测）
   crypto/ClipboardKeyManager.kt       [T1] Android Keystore 密钥、keyVersion、失效处理
   SecureClipboardDatabase.kt          [T1] Room 加密库 secure_clbdb（v1）
   SecureClipboardDao.kt               [T1]
   SecureClipboardRepositoryImpl.kt    [T1] 校验/加密/事务/解密/限额/迁移/状态
   SecureClipboardMigration.kt         [T1] 旧库读取与迁移（可注入假实现做单测）
-  data/secureclipboard/SecureClipboardVault.kt  [Lead] 单例持有仓库 + init/close
+  data/secureclipboard/SecureClipboardVault.kt  [维护者] 单例持有仓库 + init/close
 input/secureclipboard/
   SelectedTextCaptureController.kt    [T2] 盾牌按钮 → InputConnection.getSelectedText
   SelectedTextPolicy.kt               [T2] 密码框/敏感输入/IME_FLAG 判定（纯 Kotlin）
@@ -53,7 +53,7 @@ data/clipboard/
   SecureClipboardController.kt        [T3] 通道 B 监听/状态机/去重/竞态
   ClipboardEventProcessor.kt          [T3] 状态机 + 串行队列 + 快照比较（纯 Kotlin 可测）
 ui/main/settings/security/
-  SecureClipboardSettingsFragment.kt  [Lead] 设置页
+  SecureClipboardSettingsFragment.kt  [维护者] 设置页
 ```
 
 ## 3. 共享接口（已固定在 Contract.kt，不得改名）
@@ -62,7 +62,7 @@ ui/main/settings/security/
 - 仓库实现类必须命名为 `SecureClipboardRepositoryImpl(context: Context)`，并实现 `SecureClipboardRepository`；由 `SecureClipboardVault` 初始化。
 - 通道 A 的统一入口：`SecureClipboardVault.repository.save(CaptureRequest(...))`。
 - 通道 B 的统一入口：`SecureClipboardController`（T3 实现），由 `ClipboardManager` 注册为 `ClipboardManager.OnPrimaryClipChangedListener`。
-- 面板/编辑页读取明文：`ClipboardManager.readText(id)`（Lead 在门面实现，内部调仓库 `read`）。
+- 面板/编辑页读取明文：`ClipboardManager.readText(id)`（维护者 在门面实现，内部调仓库 `read`）。
 
 ## 4. 文件所有权（禁止改别人的文件）
 
@@ -71,7 +71,7 @@ ui/main/settings/security/
 - **T3 clipboard-runtime**：`data/clipboard/{SecureClipboardController,ClipboardEventProcessor}.kt`、`input/secureclipboard/{SecureClipboardPasteController,PasteSession}.kt`；允许修改 `input/clipboard/ClipboardWindow.kt`、`ClipboardAdapter.kt`、`ClipboardEntryUi.kt`、`ui/main/ClipboardEditActivity.kt`；测试 `app/src/test/java/.../secureclipboard/ClipboardEventProcessorTest.kt`。
 - **T4 test-harness**：`tools/clipboard-probe/**`（独立测试 App 模块）、`app/src/androidTest/**`、`settings.gradle.kts` 增加 `:tools:clipboard-probe` 一行、`docs/security/07-instrumentation-tests.md`。
 - **T5 audit-docs**：`docs/security/{01..06}*.md`（只写文档，不改源码）。
-- **Lead**：Contract.kt、`data/secureclipboard/SecureClipboardVault.kt`、`data/clipboard/ClipboardManager.kt`、`data/clipboard/db/ClipboardEntry.kt`、`data/prefs/AppPrefs.kt`、`FcitxApplication.kt`、`FcitxRemoteService.kt`、`AndroidManifest.xml`、`res/values*/strings.xml`、`res/drawable/ic_shield_24.xml`、`ui/main/settings/**`、`ui/main/MainFragment.kt`、`ui/main/settings/SettingsRoute.kt`、`core/Fcitx.kt`、`ui/main/DeveloperFragment.kt`、`res/xml/data_extraction_rules.xml`、`res/xml/full_backup_content.xml`、构建与最终集成。
+- **维护者**：Contract.kt、`data/secureclipboard/SecureClipboardVault.kt`、`data/clipboard/ClipboardManager.kt`、`data/clipboard/db/ClipboardEntry.kt`、`data/prefs/AppPrefs.kt`、`FcitxApplication.kt`、`FcitxRemoteService.kt`、`AndroidManifest.xml`、`res/values*/strings.xml`、`res/drawable/ic_shield_24.xml`、`ui/main/settings/**`、`ui/main/MainFragment.kt`、`ui/main/settings/SettingsRoute.kt`、`core/Fcitx.kt`、`ui/main/DeveloperFragment.kt`、`res/xml/data_extraction_rules.xml`、`res/xml/full_backup_content.xml`、构建与最终集成。
 
 ## 5. 编码与安全规则
 
@@ -83,10 +83,10 @@ ui/main/settings/security/
 6. 所有外部入口（PROCESS_TEXT / SEND）默认弹出确认，限制长度，校验 Intent；外部调用不得直接改库。
 7. `commitText` 必须走 `FcitxInputMethodService.commitText` 或等价 `currentInputConnection` 封装；粘贴前核对输入会话（`EditorInfo`/InputConnection 有效性）。
 8. 新增代码不应修改 Fcitx5/libime 原生引擎；不动现有输入法功能。
-9. 注释/日志用英文；用户可见字符串由 Lead 统一加入 `strings.xml` 与 `values-zh-rCN/strings.xml`，代码里只引用 `R.string.xxx`。
-10. 不要运行 Gradle（Lead 统一构建），不要改动 `build.gradle.kts`（除 T4 的 settings.gradle.kts 一行）。
+9. 注释/日志用英文；用户可见字符串由 维护者 统一加入 `strings.xml` 与 `values-zh-rCN/strings.xml`，代码里只引用 `R.string.xxx`。
+10. 不要运行 Gradle（维护者 统一构建），不要改动 `build.gradle.kts`（除 T4 的 settings.gradle.kts 一行）。
 
-## 6. 验收命令（Lead 执行）
+## 6. 验收命令（维护者 执行）
 
 ```
 .\\gradlew.bat :app:compileDebugKotlin "-PndkVersion=28.2.13676358" "-PcmakeVersion=3.22.1" "-PbuildTools=36.0.0" "-PbuildABI=arm64-v8a"

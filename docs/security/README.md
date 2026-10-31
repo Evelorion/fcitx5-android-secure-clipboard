@@ -1,7 +1,7 @@
 # Fcitx5 Android 隐私优先双通道安全剪贴板 —— 交付索引
 
-> 仓库：`D:\KEYBORD\src\fcitx5-android`（上游 `https://github.com/fcitx5-android/fcitx5-android`，master `eb5b50216e70484a009933d9519db76005f1faf3`）
-> 需求来源：`C:\Users\Alart\Desktop\新增 Microsoft Word 文件 (2).docx`
+> 上游基线 commit：eb5b50216e70484a009933d9519db76005f1faf3。
+> 上游项目：https://github.com/fcitx5-android/fcitx5-android
 > 本目录所有文档均为本次工程改造的实际交付物；**未跑真机/模拟器的项目一律标注“未验证”**，不宣称已通过。
 
 ## 实施状态一览
@@ -49,9 +49,9 @@
 ```powershell
 $env:JAVA_HOME='C:\Program Files\Java\jdk-17'
 $env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
-$env:ECM_DIR='D:\KEYBORD\native-deps\ecm-install\share\ECM\cmake'
-$env:PATH="D:\KEYBORD\native-deps\gettext\bin;" + $env:PATH
-Set-Location 'D:\KEYBORD\src\fcitx5-android'
+$env:ECM_DIR='<本地 ECM 安装>\share\ECM\cmake'
+$env:PATH="<本地 gettext>\bin;" + $env:PATH
+Set-Location '<本仓库根目录>'
 
 # 1) Kotlin 编译
 .\gradlew.bat :app:compileDebugKotlin --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
@@ -65,7 +65,7 @@ Set-Location 'D:\KEYBORD\src\fcitx5-android'
 .\gradlew.bat :app:assembleDebug --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
 ```
 
-产物（本机已实际构建，另复制到 `D:\KEYBORD\dist\`）：
+产物（本机已实际构建，另复制到 `<本地发布目录>\`）：
 - 主 APK：`app/build/outputs/apk/debug/org.fcitx.fcitx5.android-eb5b502-arm64-v8a-debug.apk`（69,819,756 字节，SHA-256 `D7C880B1…0ADE86B`）；模拟器功能实测使用同源码的 x86_64 构建
 - 测试工具（**仅测试用，不属于功能交付**）：`tools/clipboard-probe/`（约 940KB 零权限）与 `tools/rogue-clipboard-app/`（982KB 零权限红队 App）；两者均不参与 :app 依赖
 
