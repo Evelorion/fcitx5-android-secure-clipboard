@@ -9,7 +9,7 @@
 | --- | --- |
 | OS | Windows（x64，中文系统） |
 | 仓库 | `<本仓库根目录>`（GitHub fcitx5-android master，commit `eb5b50216e70484a009933d9519db76005f1faf3`，含子模块） |
-| JDK | Temurin 17（`C:\Program Files\Java\jdk-17`），`JAVA_HOME` 显式指定 |
+| JDK | Temurin 17（`<JDK 17 安装目录>`），`JAVA_HOME` 显式指定 |
 | Gradle | 9.6.1（wrapper 自动下载） |
 | AGP / Kotlin / KSP | AGP 9.4.1 / Kotlin 2.4.10 / KSP 2.3.10（`gradle/libs.versions.toml`） |
 | Android SDK | compileSdk 36、buildTools 36.0.0（本机未装 36.1.0，故用 `-PbuildTools=36.0.0`） |
@@ -129,7 +129,7 @@ length(UTF-16 units) | avg(us) | min(us) | max(us) | MiB/s(round-trip)
 ## 7. 复现命令（本机已实际执行）
 
 ```powershell
-$env:JAVA_HOME='C:\Program Files\Java\jdk-17'
+$env:JAVA_HOME='<JDK 17 安装目录>'
 $env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
 $env:ANDROID_SDK_ROOT="$env:LOCALAPPDATA\Android\Sdk"
 $env:ECM_DIR='<本地 ECM 安装>\share\ECM\cmake'

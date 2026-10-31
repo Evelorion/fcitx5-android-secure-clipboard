@@ -165,7 +165,7 @@
 
 ## 五、构建、签名与发布
 
-    $env:JAVA_HOME='C:\Program Files\Java\jdk-17'
+    $env:JAVA_HOME='<JDK 17 安装目录>'
     $env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
     $env:ECM_DIR='<本地 ECM 安装>\share\ECM\cmake'
     $env:PATH="<本地 gettext>\bin;" + $env:PATH

@@ -47,7 +47,7 @@
 原生构建在 Windows 上还需要 **ECM**（KDE Extra CMake Modules）与 **gettext** 工具。本机用最小化 ECM 包 + gettext 静态发行版解决；Linux/macOS 上装系统包即可。
 
 ```powershell
-$env:JAVA_HOME='C:\Program Files\Java\jdk-17'
+$env:JAVA_HOME='<JDK 17 安装目录>'
 $env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
 $env:ECM_DIR='<本地 ECM 安装>\share\ECM\cmake'
 $env:PATH="<本地 gettext>\bin;" + $env:PATH
