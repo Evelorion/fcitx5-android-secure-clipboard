@@ -2,6 +2,11 @@
 
 [Fcitx5](https://github.com/fcitx/fcitx5) input method framework and engines ported to Android.
 
+> [!IMPORTANT]
+> This fork adds a privacy-first dual-channel encrypted secure clipboard with source audit, implementation, tests and red-team reports.
+> See [SECURE-CLIPBOARD.md](SECURE-CLIPBOARD.md) and [docs/security/README.md](docs/security/README.md).
+> Release artifacts in this fork are **debug-signed test builds**, not official Fcitx5 releases.
+
 ## Download
 
 [<img src="https://github.com/rubenpgrady/get-it-on-github/raw/refs/heads/main/get-it-on-github.png" alt="Git it on GitHub" width="207" height="80">](https://github.com/fcitx5-android/fcitx5-android/releases/latest)
