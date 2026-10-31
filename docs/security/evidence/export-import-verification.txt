@@ -1,0 +1,12 @@
+Secure history export file verification (emulator)
+file size: 603 bytes
+magic: b'FCSC-EXPORT'
+format version byte: 1
+salt: 16 bytes, IV: 12 bytes, rest: AES-256-GCM ciphertext+tag
+plaintext test strings present in file: [b'SECURE_TEST', b'CHANNEL_A', b'LEGACY_TEST', b'ROGUE_']
+  present? {'SECURE_TEST': False, 'CHANNEL_A': False, 'LEGACY_TEST': False, 'ROGUE_': False}
+
+Import tests:
+  wrong passphrase -> rejected, DB rows after = 0 (still empty)
+  correct passphrase -> imported 5 records, DB rows = 5
+  (after the import test the vault later gained rows 6/7 from deliberate clipboard captures during rogue tests)

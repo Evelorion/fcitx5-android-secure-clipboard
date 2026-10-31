@@ -1,0 +1,1 @@
+﻿10-31 09:41:16.189  6831  6858 I ROGUE   : RESULT|read_clipboard|success|accessible=true;hasText=true;length=22;sha256_8=2239d7cb;preview="ROGUE_LEGACY_CLIP_1000";itemCount=1;note=foreground_read_is_allowed_by_the_platform_test_strings_only

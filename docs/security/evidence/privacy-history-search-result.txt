@@ -1,0 +1,12 @@
+Privacy history search on Android 16 emulator (Fcitx5 in-app activity)
+Query: SECURE
+Result UI text (uiautomator):
+隐私历史
+SECURE
+搜索
+2 条匹配记录
+加密安全记录
+来源：剪贴板 · 2026年10月31日 09:13
+加密安全记录
+来源：剪贴板 · 2026年10月31日 09:07
+Expected: 2 matching records (SECURE_TEST_67890 in 09:07 and SECURE_TEST_V2_XYZ in 09:13)

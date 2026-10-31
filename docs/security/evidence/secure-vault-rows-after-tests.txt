@@ -1,0 +1,11 @@
+Secure clipboard vault rows (encrypted Room DB secure_clbdb) after emulator tests
+columns: id | sourceType | createdAt | ciphertextLen | ivLen | dedupTag
+(6, 'system_clipboard', 1793438148126, 39, 12, '2b8b92c0927e8e46ec50e1dea8a343b40dcf9c210cc2566297b3ec8b077c0934')
+(7, 'process_text', 1793438048373, 35, 12, '9f6f40073bba0bd7812a80219edc5e8f42af96a53a1a01e3c0c316fd5cec6c27')
+(8, 'system_clipboard', 1793438033769, 34, 12, 'fd07b72dea294861fefbb9b4f1026d7d07f4f7f72bd5b904a7a7f30a710f0f1e')
+(9, 'system_clipboard', 1793437655280, 33, 12, 'c3272711b4c622591c364ee4db8b3c4d7689141efeb88310d21534ed6621ec09')
+(10, 'system_clipboard', 1793437494859, 33, 12, '76b0aa48601d8adcd3a0f218a8930c1631fd04c745f9a82af699e45def74caba')
+(11, 'system_clipboard', 1793439434106, 37, 12, 'd2db7bf2ffa1a378bac9f6253359b9c8f2062872fc24e80c56886e32a29793ac')
+(12, 'system_clipboard', 1793439506762, 37, 12, 'ddca82e17488a8c8063f4cba369af428e0a2d8ce0f274606117dd07c3bff9cfe')
+
+Note: ciphertextLen = plaintext UTF-8 length + 16-byte GCM tag; ivLen = 12 bytes.
