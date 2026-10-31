@@ -240,7 +240,7 @@ Set-Location '<本仓库根目录>'
 
 ## 15. 发行版构建与冒烟测试（2026-10-31 18:3x 补充）
 
-- `:app:assembleRelease` 成功（arm64-v8a）：54,676,844 字节，versionCode 112 / versionName 0.1.3-30-gc9a5fcec，R8 混淆 + 资源压缩，无 INTERNET 权限；apksigner v1+v2 验证通过，证书为本机 release key（SHA-256 3E:E0:29:DE:…:04:F5）。
+- `:app:assembleRelease` 成功（arm64-v8a）：54,676,925 字节，versionCode 112 / versionName 0.1.3-32-g3c115bcd，R8 混淆 + 资源压缩，无 INTERNET 权限；apksigner v1+v2 验证通过，证书为本机 release key（SHA-256 3E:E0:29:DE:…:04:F5）。
 - 新增功能已提供简体中文 / 繁体中文（zh-rTW、zh-rHK）/ 日语本地化，跟随系统语言。
 - 同源码 x86_64 release 包在 Android 16 模拟器冒烟：安装启动正常；隐私设置页正常；启用安全模式后“加密存储/密钥”显示 OK、默认输入法 Active；测试内容复制 → 系统剪贴板被清空（前台应用读取为空）；隐私历史显示 2 条遮罩记录（无明文）。
 - 词库回归（release 变体）：输入 nihao → 候选 1.你好 / 2.👋 / 3.拟好 / 4.你…，提交得到“你好”，R8 未破坏词典/语言模型。
