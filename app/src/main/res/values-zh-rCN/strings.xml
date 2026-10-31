@@ -429,4 +429,8 @@
     <string name="secure_history_export_dir_note">备份保存在应用外部文件目录，使用你设置的口令加密。</string>
     <string name="space_long_press_voice">长按空格键切换到语音输入</string>
     <string name="space_long_press_voice_summary">需要先在“首选语音输入”中选择语音输入法</string>
+    <string name="secure_selection_accessibility">全局安全复制按钮（无障碍）</string>
+    <string name="secure_selection_accessibility_summary">在任意 App 选中文字时显示悬浮“安全保存”按钮；需要开启无障碍权限。</string>
+    <string name="secure_selection_overlay">安全保存</string>
+    <string name="secure_selection_accessibility_desc">为不支持标准文本选择菜单的 App 提供选中文字的安全保存悬浮按钮。</string>
 </resources>

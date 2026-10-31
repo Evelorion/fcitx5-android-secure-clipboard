@@ -6,6 +6,7 @@ package org.fcitx.fcitx5.android.ui.main.settings.security
 
 import android.app.AlertDialog
 import android.content.Intent
+import android.provider.Settings
 import android.text.format.DateFormat
 import androidx.annotation.Keep
 import androidx.lifecycle.Lifecycle
@@ -120,6 +121,16 @@ class SecureClipboardSettingsFragment :
         })
 
         screen.addPreference(Preference(ctx).apply {
+            key = KEY_ACCESSIBILITY
+            setTitle(R.string.secure_selection_accessibility)
+            setSummary(R.string.secure_selection_accessibility_summary)
+            setOnPreferenceClickListener {
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                true
+            }
+        })
+
+        screen.addPreference(Preference(ctx).apply {
             key = KEY_NOTE
             isSelectable = false
             setTitle(R.string.secure_clipboard_note)
@@ -222,6 +233,7 @@ class SecureClipboardSettingsFragment :
         private const val KEY_HISTORY = "secure_clipboard_privacy_history"
         private const val KEY_MIGRATE = "secure_clipboard_migrate_action"
         private const val KEY_CLEAR_HISTORY = "secure_clipboard_clear_history_action"
+        private const val KEY_ACCESSIBILITY = "secure_clipboard_accessibility_action"
         private const val KEY_NOTE = "secure_clipboard_note"
     }
 }

@@ -360,4 +360,8 @@
     <string name="secure_history_export_dir_note">バックアップはアプリの外部ファイルディレクトリに保存され、パスフレーズで暗号化されます。</string>
     <string name="space_long_press_voice">スペースキーの長押しで音声入力に切り替え</string>
     <string name="space_long_press_voice_summary">「優先する音声入力」で音声入力方法を選択してください</string>
+    <string name="secure_selection_accessibility">グローバル安全コピーボタン（アクセシビリティ）</string>
+    <string name="secure_selection_accessibility_summary">任意のアプリでテキストを選択したときに「安全に保存」ボタンを表示します。アクセシビリティ権限が必要です。</string>
+    <string name="secure_selection_overlay">安全に保存</string>
+    <string name="secure_selection_accessibility_desc">標準のテキスト選択メニューがないアプリ向けに、選択テキストを安全に保存するフローティングボタンを追加します。</string>
 </resources>

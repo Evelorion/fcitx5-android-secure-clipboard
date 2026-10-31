@@ -422,4 +422,8 @@
     <string name="secure_history_export_dir_note">備份儲存在應用外部檔案目錄，使用你設定的口令加密。</string>
     <string name="space_long_press_voice">長按空白鍵切換到語音輸入</string>
     <string name="space_long_press_voice_summary">需要先在「偏好語音輸入」中選擇語音輸入法</string>
+    <string name="secure_selection_accessibility">全域安全複製按鈕（無障礙）</string>
+    <string name="secure_selection_accessibility_summary">在任意 App 選取文字時顯示懸浮「安全儲存」按鈕；需要開啟無障礙權限。</string>
+    <string name="secure_selection_overlay">安全儲存</string>
+    <string name="secure_selection_accessibility_desc">為不支援標準文字選取選單的 App 提供選取文字的安全儲存懸浮按鈕。</string>
 </resources>

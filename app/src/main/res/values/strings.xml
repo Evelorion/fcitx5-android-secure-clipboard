@@ -429,4 +429,8 @@
     <string name="secure_history_export_dir_note">Backups are stored in the app external files directory, encrypted with your passphrase.</string>
     <string name="space_long_press_voice">Long-press space for voice input</string>
     <string name="space_long_press_voice_summary">Switches to a voice input method; choose it under "Preferred voice input"</string>
+    <string name="secure_selection_accessibility">Global secure-copy button (accessibility)</string>
+    <string name="secure_selection_accessibility_summary">Show a floating "Save securely" button when text is selected in any app. Requires accessibility permission.</string>
+    <string name="secure_selection_overlay">Save securely</string>
+    <string name="secure_selection_accessibility_desc">Adds a floating save button for selected text in apps whose text selection menu does not support ACTION_PROCESS_TEXT.</string>
 </resources>
