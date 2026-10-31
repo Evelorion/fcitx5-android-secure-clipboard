@@ -420,4 +420,6 @@
     <string name="import_no_files">沒有找到備份檔案</string>
     <string name="backup_wrong_passphrase">密碼錯誤或檔案已損壞</string>
     <string name="secure_history_export_dir_note">備份儲存在應用外部檔案目錄，使用你設定的口令加密。</string>
+    <string name="space_long_press_voice">長按空白鍵切換到語音輸入</string>
+    <string name="space_long_press_voice_summary">需要先在「偏好語音輸入」中選擇語音輸入法</string>
 </resources>

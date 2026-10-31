@@ -427,4 +427,6 @@
     <string name="import_no_files">No backup files found</string>
     <string name="backup_wrong_passphrase">Wrong passphrase or corrupted file</string>
     <string name="secure_history_export_dir_note">Backups are stored in the app external files directory, encrypted with your passphrase.</string>
+    <string name="space_long_press_voice">Long-press space for voice input</string>
+    <string name="space_long_press_voice_summary">Switches to a voice input method; choose it under "Preferred voice input"</string>
 </resources>

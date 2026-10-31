@@ -34,6 +34,7 @@ import org.fcitx.fcitx5.android.input.keyboard.KeyAction.SymAction
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.UnicodeAction
 import org.fcitx.fcitx5.android.input.picker.PickerWindow
 import org.fcitx.fcitx5.android.input.wm.InputWindowManager
+import org.fcitx.fcitx5.android.utils.InputMethodUtil
 import org.fcitx.fcitx5.android.utils.switchToNextIME
 import org.mechdancer.dependency.Dependent
 import org.mechdancer.dependency.UniqueComponent
@@ -60,6 +61,8 @@ class CommonKeyActionListener :
     private val kbdPrefs = AppPrefs.getInstance().keyboard
 
     private val spaceKeyLongPressBehavior by kbdPrefs.spaceKeyLongPressBehavior
+    private val spaceLongPressVoice by kbdPrefs.spaceLongPressVoice
+    private val preferredVoiceInput by kbdPrefs.preferredVoiceInput
     private val langSwitchKeyBehavior by kbdPrefs.langSwitchKeyBehavior
 
     private var backspaceSwipeState = Stopped
@@ -171,15 +174,24 @@ class CommonKeyActionListener :
                     }
                 }
                 is SpaceLongPressAction -> {
-                    when (spaceKeyLongPressBehavior) {
-                        SpaceLongPressBehavior.None -> {}
-                        SpaceLongPressBehavior.Enumerate -> service.postFcitxJob {
-                            enumerateIme()
+                    val voice = if (spaceLongPressVoice) {
+                        InputMethodUtil.findVoiceSubtype(preferredVoiceInput)
+                    } else {
+                        null
+                    }
+                    if (voice != null) {
+                        InputMethodUtil.switchInputMethod(service, voice.first, voice.second)
+                    } else {
+                        when (spaceKeyLongPressBehavior) {
+                            SpaceLongPressBehavior.None -> {}
+                            SpaceLongPressBehavior.Enumerate -> service.postFcitxJob {
+                                enumerateIme()
+                            }
+                            SpaceLongPressBehavior.ToggleActivate -> service.postFcitxJob {
+                                toggleIme()
+                            }
+                            SpaceLongPressBehavior.ShowPicker -> showInputMethodPicker()
                         }
-                        SpaceLongPressBehavior.ToggleActivate -> service.postFcitxJob {
-                            toggleIme()
-                        }
-                        SpaceLongPressBehavior.ShowPicker -> showInputMethodPicker()
                     }
                 }
                 else -> {}

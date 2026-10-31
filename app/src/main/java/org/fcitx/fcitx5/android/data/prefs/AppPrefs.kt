@@ -158,6 +158,14 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             R.string.preferred_voice_input, "preferred_voice_input", ""
         ) { showVoiceInputButton.getValue() }
 
+        /** When enabled, long-pressing the space key switches to the preferred voice input. */
+        val spaceLongPressVoice = switch(
+            R.string.space_long_press_voice,
+            "space_long_press_voice",
+            false,
+            R.string.space_long_press_voice_summary
+        )
+
         val expandKeypressArea =
             switch(R.string.expand_keypress_area, "expand_keypress_area", false)
         val swipeSymbolDirection = enumList(

@@ -358,4 +358,6 @@
     <string name="import_no_files">バックアップファイルが見つかりません</string>
     <string name="backup_wrong_passphrase">パスフレーズが間違っているか、ファイルが破損しています</string>
     <string name="secure_history_export_dir_note">バックアップはアプリの外部ファイルディレクトリに保存され、パスフレーズで暗号化されます。</string>
+    <string name="space_long_press_voice">スペースキーの長押しで音声入力に切り替え</string>
+    <string name="space_long_press_voice_summary">「優先する音声入力」で音声入力方法を選択してください</string>
 </resources>
