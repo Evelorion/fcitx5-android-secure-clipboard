@@ -9,6 +9,7 @@ import android.content.ClipDescription
 import android.os.Build
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import org.fcitx.fcitx5.android.utils.timestamp
 
@@ -27,6 +28,16 @@ data class ClipboardEntry(
     @ColumnInfo(defaultValue = "0")
     val sensitive: Boolean = false
 ) {
+    /**
+     * Display-only marker: this item comes from the encrypted secure clipboard store.
+     * It is intentionally not persisted by Room; the legacy plaintext table never sets it.
+     * Kept out of the primary constructor because Room does not accept ignored constructor
+     * parameters for entities.
+     */
+    @Ignore
+    var secure: Boolean = false
+
+
     companion object {
         const val BULLET = "•"
 

@@ -484,6 +484,10 @@ class Fcitx(private val context: Context) : FcitxAPI, FcitxLifecycleOwner {
 
     @Keep
     private val onClipboardUpdate = ClipboardManager.OnClipboardUpdateListener {
+        // Secure entries must never be mirrored into the fcitx engine clipboard: the native
+        // clipboard module keeps plaintext in memory and exposes it to engine addons. Safe
+        // paste goes through InputConnection only (see SecureClipboardPasteController).
+        if (it.secure) return@OnClipboardUpdateListener
         lifecycle.launchWhenReady { setClipboard(it.text, it.sensitive) }
     }
 

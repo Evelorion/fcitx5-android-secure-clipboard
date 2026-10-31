@@ -33,6 +33,7 @@ import org.fcitx.fcitx5.android.ui.main.settings.behavior.SymbolSettingsFragment
 import org.fcitx.fcitx5.android.ui.main.settings.global.GlobalConfigFragment
 import org.fcitx.fcitx5.android.ui.main.settings.im.InputMethodConfigFragment
 import org.fcitx.fcitx5.android.ui.main.settings.im.InputMethodListFragment
+import org.fcitx.fcitx5.android.ui.main.settings.security.SecureClipboardSettingsFragment
 import org.fcitx.fcitx5.android.ui.main.settings.theme.ThemeFragment
 import org.fcitx.fcitx5.android.utils.config.ConfigDescriptor
 import org.fcitx.fcitx5.android.utils.parcelable
@@ -76,6 +77,9 @@ sealed class SettingsRoute : Parcelable {
 
     @Serializable
     data object Clipboard : SettingsRoute()
+
+    @Serializable
+    data object Security : SettingsRoute()
 
     @Serializable
     data object Symbol : SettingsRoute()
@@ -215,6 +219,9 @@ sealed class SettingsRoute : Parcelable {
             }
             fragment<ClipboardSettingsFragment, Clipboard> {
                 label = ctx.getString(R.string.clipboard)
+            }
+            fragment<SecureClipboardSettingsFragment, Security> {
+                label = ctx.getString(R.string.security_and_privacy)
             }
             fragment<SymbolSettingsFragment, Symbol> {
                 label = ctx.getString(R.string.emoji_and_symbols)

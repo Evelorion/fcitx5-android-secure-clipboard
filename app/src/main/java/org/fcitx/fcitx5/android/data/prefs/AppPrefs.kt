@@ -12,6 +12,7 @@ import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.data.InputFeedbacks.InputFeedbackMode
+import org.fcitx.fcitx5.android.data.secureclipboard.SecureClipboardLimits
 import org.fcitx.fcitx5.android.input.candidates.expanded.ExpandedCandidateStyle
 import org.fcitx.fcitx5.android.input.candidates.floating.FloatingCandidatesMode
 import org.fcitx.fcitx5.android.input.candidates.floating.FloatingCandidatesOrientation
@@ -36,6 +37,9 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
         val pid = int("pid", 0)
         val editorInfoInspector = bool("editor_info_inspector", false)
         val needNotifications = bool("need_notifications", true)
+
+        /** Set once the legacy plaintext clipboard history has been encrypted and wiped. */
+        val secureClipboardLegacyMigrated = bool("secure_clipboard_legacy_migrated", false)
     }
 
     inner class Advanced : ManagedPreferenceCategory(R.string.advanced, sharedPreferences) {
@@ -357,6 +361,71 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
         ) { clipboardListening.getValue() }
     }
 
+    inner class Security : ManagedPreferenceCategory(R.string.security_and_privacy, sharedPreferences) {
+        /** Master switch. Off by default; the original plaintext clipboard behaviour is kept when off. */
+        val secureClipboardEnabled = switch(
+            R.string.secure_clipboard_enable,
+            "secure_clipboard_enable",
+            false,
+            R.string.secure_clipboard_enable_summary
+        )
+
+        /** Channel B: listen to the system clipboard (shares the legacy "clipboard_enable" key). */
+        val secureClipboardAutoCapture = switch(
+            R.string.secure_clipboard_auto_capture,
+            "clipboard_enable",
+            true,
+            R.string.secure_clipboard_auto_capture_summary
+        ) { secureClipboardEnabled.getValue() }
+
+        /** Clear the system clipboard right after a successful encrypted save. */
+        val secureClipboardClearAfterSave = switch(
+            R.string.secure_clipboard_clear_after_save,
+            "secure_clipboard_clear_after_save",
+            true
+        ) { secureClipboardEnabled.getValue() && secureClipboardAutoCapture.getValue() }
+
+        /** Hide secure history content in the clipboard panel (decrypt only on demand). */
+        val secureClipboardMaskHistory = switch(
+            R.string.secure_clipboard_mask_history,
+            "secure_clipboard_mask_history",
+            true
+        ) { secureClipboardEnabled.getValue() }
+
+        /** Strict mode: when off, third-party clipboard transformers never see raw text. */
+        val secureClipboardAllowPlugins = switch(
+            R.string.secure_clipboard_allow_plugins,
+            "secure_clipboard_allow_plugins",
+            false,
+            R.string.secure_clipboard_allow_plugins_summary
+        ) { secureClipboardEnabled.getValue() }
+
+        /** Temporarily keep the system clipboard for apps that rely on native paste. */
+        val secureClipboardCompatMode = switch(
+            R.string.secure_clipboard_compat_mode,
+            "secure_clipboard_compat_mode",
+            false,
+            R.string.secure_clipboard_compat_mode_summary
+        ) { secureClipboardEnabled.getValue() }
+
+        /** Optional device credential check before decrypting and pasting a secure record. */
+        val secureClipboardRequireAuth = switch(
+            R.string.secure_clipboard_require_auth,
+            "secure_clipboard_require_auth",
+            false
+        ) { secureClipboardEnabled.getValue() }
+
+        val secureClipboardHistoryLimit = int(
+            R.string.secure_clipboard_capture_limit,
+            "secure_clipboard_history_limit",
+            SecureClipboardLimits.DEFAULT_HISTORY_LIMIT,
+            10,
+            SecureClipboardLimits.MAX_HISTORY_LIMIT,
+            unit = "",
+            step = 10
+        ) { secureClipboardEnabled.getValue() }
+    }
+
     inner class Symbols : ManagedPreferenceCategory(R.string.emoji_and_symbols, sharedPreferences) {
         val hideUnsupportedEmojis = switch(
             R.string.hide_unsupported_emojis,
@@ -389,6 +458,7 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
     val keyboard = Keyboard().register()
     val candidates = Candidates().register()
     val clipboard = Clipboard().register()
+    val security = Security().register()
     val symbols = Symbols().register()
     val advanced = Advanced().register()
 
@@ -418,7 +488,8 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             listOf(
                 keyboard,
                 candidates,
-                clipboard
+                clipboard,
+                security
             ).forEach { category ->
                 category.managedPreferences.forEach {
                     it.value.putValueTo(this@edit)

@@ -108,12 +108,22 @@ abstract class ClipboardAdapter(
                         onPin(entry.id)
                     }
                 }
+                if (entry.secure) {
+                    // Decrypt a single record on explicit request only; the list itself shows the
+                    // masked label and never decrypts history in bulk.
+                    menu.item(
+                        R.string.secure_entry_reveal, R.drawable.ic_shield_24, iconTint
+                    ) {
+                        onReveal(entry.id)
+                    }
+                }
                 menu.item(R.string.edit, R.drawable.ic_baseline_edit_24, iconTint) {
                     onEdit(entry.id)
                 }
+                // Sharing a secure record would export its plaintext, so it is disabled.
                 menu.item(R.string.share, R.drawable.ic_baseline_share_24, iconTint) {
                     onShare(entry)
-                }
+                }.apply { isEnabled = !entry.secure }
                 menu.item(R.string.delete, R.drawable.ic_baseline_delete_24, iconTint) {
                     onDelete(entry.id)
                 }
@@ -145,6 +155,9 @@ abstract class ClipboardAdapter(
     abstract fun onUnpin(id: Int)
 
     abstract fun onEdit(id: Int)
+
+    /** Called for secure records to decrypt and reveal one entry on demand. */
+    abstract fun onReveal(id: Int)
 
     abstract fun onShare(entry: ClipboardEntry)
 

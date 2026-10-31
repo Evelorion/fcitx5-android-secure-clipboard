@@ -67,6 +67,16 @@ sealed class ClipboardInstructionUi(override val ctx: Context, protected val the
             setTextColor(theme.keyTextColor)
         }
 
+        /**
+         * In secure mode the history starts empty and normal copies are transferred encrypted,
+         * so the generic "copy something" instruction would be misleading.
+         */
+        fun setSecureMode(secure: Boolean) {
+            instructionText.setText(
+                if (secure) R.string.secure_history_empty else R.string.instruction_copy
+            )
+        }
+
         override val root = constraintLayout {
             add(icon, lParams(dp(90), dp(90)) {
                 topOfParent(dp(24))

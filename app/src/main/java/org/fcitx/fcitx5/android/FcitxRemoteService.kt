@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import android.os.Process
+import androidx.annotation.Keep
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -23,6 +24,8 @@ import org.fcitx.fcitx5.android.core.reloadPinyinDict
 import org.fcitx.fcitx5.android.core.reloadQuickPhrase
 import org.fcitx.fcitx5.android.daemon.FcitxDaemon
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
+import org.fcitx.fcitx5.android.data.prefs.AppPrefs
+import org.fcitx.fcitx5.android.data.prefs.ManagedPreference
 import org.fcitx.fcitx5.android.utils.Const
 import org.fcitx.fcitx5.android.utils.desc
 import org.fcitx.fcitx5.android.utils.descEquals
@@ -50,10 +53,30 @@ class FcitxRemoteService : Service() {
         return result
     }
 
+    /**
+     * Third-party clipboard transformers are an explicit `signature`-level plugin surface, but
+     * even trusted plugins must not receive raw text while the secure clipboard runs in strict
+     * mode. In strict mode the transformer hook is removed entirely (channel A never uses it, and
+     * channel B only consults it when the user allowed plugins).
+     */
+    private fun isStrictSecureMode(): Boolean {
+        val security = AppPrefs.getInstance().security
+        return security.secureClipboardEnabled.getValue() &&
+                !security.secureClipboardAllowPlugins.getValue()
+    }
+
     private suspend fun updateClipboardManager() = clipboardTransformerLock.withLock {
+        val strict = isStrictSecureMode()
         ClipboardManager.transformer =
-            if (clipboardTransformers.isEmpty()) null else ::transformClipboard
-        Timber.d("All clipboard transformers: ${clipboardTransformers.joinToString { it.desc }}")
+            if (strict || clipboardTransformers.isEmpty()) null else ::transformClipboard
+        Timber.d(
+            "Clipboard transformers: ${clipboardTransformers.size}, strictSecureMode=$strict"
+        )
+    }
+
+    @Keep
+    private val securityPolicyListener = ManagedPreference.OnChangeListener<Any> { _, _ ->
+        scope.launch { updateClipboardManager() }
     }
 
     private val binder = object : IFcitxRemoteService.Stub() {
@@ -112,6 +135,9 @@ class FcitxRemoteService : Service() {
     override fun onCreate() {
         Timber.d("FcitxRemoteService onCreate")
         super.onCreate()
+        val security = AppPrefs.getInstance().security
+        security.secureClipboardEnabled.registerOnChangeListener(securityPolicyListener)
+        security.secureClipboardAllowPlugins.registerOnChangeListener(securityPolicyListener)
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -126,6 +152,9 @@ class FcitxRemoteService : Service() {
 
     override fun onDestroy() {
         Timber.d("FcitxRemoteService onDestroy")
+        val security = AppPrefs.getInstance().security
+        security.secureClipboardEnabled.unregisterOnChangeListener(securityPolicyListener)
+        security.secureClipboardAllowPlugins.unregisterOnChangeListener(securityPolicyListener)
         scope.cancel()
         clipboardTransformers.clear()
         runBlocking { updateClipboardManager() }

@@ -121,6 +121,59 @@
             android:theme="@style/Theme.DialogTheme"
             android:windowSoftInputMode="stateAlwaysVisible|adjustPan" />
 
+        <!-- Secure clipboard: user initiated capture entries. They never write the system clipboard. -->
+        <activity
+            android:name=".ui.securecapture.SecureCaptureActivity"
+            android:autoRemoveFromRecents="true"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/secure_capture"
+            android:launchMode="singleTop"
+            android:taskAffinity=".ui.securecapture"
+            android:theme="@style/Theme.DialogTheme"
+            android:windowSoftInputMode="stateAlwaysHidden|adjustNothing">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.securecapture.SecureShareReceiverActivity"
+            android:autoRemoveFromRecents="true"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/secure_capture"
+            android:launchMode="singleTop"
+            android:taskAffinity=".ui.securecapture"
+            android:theme="@style/Theme.DialogTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.securecapture.SecureUnlockActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:label="@string/auth_title"
+            android:theme="@style/Theme.DialogTheme" />
+
+        <activity
+            android:name=".ui.main.settings.security.SecureHistoryActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:label="@string/privacy_history"
+            android:theme="@style/Theme.FcitxAppTheme" />
+
         <service
             android:name=".input.FcitxInputMethodService"
             android:directBootAware="true"

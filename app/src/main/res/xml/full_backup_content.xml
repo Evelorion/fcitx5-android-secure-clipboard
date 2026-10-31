@@ -12,4 +12,23 @@
     <exclude
         domain="file"
         path="README.md" />
+        <!-- Secure clipboard: never upload encrypted history or the legacy plaintext database. -->
+        <exclude
+            domain="database"
+            path="secure_clbdb" />
+        <exclude
+            domain="database"
+            path="secure_clbdb-wal" />
+        <exclude
+            domain="database"
+            path="secure_clbdb-shm" />
+        <exclude
+            domain="database"
+            path="clbdb" />
+        <exclude
+            domain="database"
+            path="clbdb-wal" />
+        <exclude
+            domain="database"
+            path="clbdb-shm" />
 </full-backup-content>

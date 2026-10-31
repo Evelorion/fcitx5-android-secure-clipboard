@@ -38,6 +38,12 @@ class ClipboardEditActivity : Activity() {
             clipboardEditCancel.setOnClickListener { finish() }
             clipboardEditOk.setOnClickListener { finishEditing() }
             clipboardEditCopy.setOnClickListener { finishEditing(copy = true) }
+            if (ClipboardManager.isSecureMode) {
+                // Secure records are ciphertext at rest; writing the edited text back to the
+                // system clipboard would bypass the feature, so the copy action is disabled.
+                clipboardEditCopy.isEnabled = false
+                clipboardEditCopy.alpha = 0.5f
+            }
         }
         setContentView(binding.root)
         inputMethodManager.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
@@ -48,7 +54,9 @@ class ClipboardEditActivity : Activity() {
         val str = editText.str
         scope.launch {
             ClipboardManager.updateText(entryId, str)
-            if (copy) {
+            // Defence in depth: the button is disabled in secure mode, and even if it were
+            // triggered the decrypted text must never reach the system clipboard.
+            if (copy && !ClipboardManager.isSecureMode) {
                 clipboardManager.setPrimaryClip(ClipData.newPlainText("", str))
             }
         }
@@ -67,13 +75,22 @@ class ClipboardEditActivity : Activity() {
 
     private fun processIntent(intent: Intent) {
         scope.launch {
-            intent.run {
+            val id = intent.run {
                 if (getBooleanExtra(LAST_ENTRY, false)) {
-                    ClipboardManager.lastEntry
+                    ClipboardManager.lastEntry?.id ?: -1
                 } else {
-                    ClipboardManager.get(getIntExtra(ENTRY_ID, -1))
+                    getIntExtra(ENTRY_ID, -1)
                 }
-            }?.let { setEntry(it) }
+            }
+            if (id < 0) return@launch
+            // get(id) only returns the masked display item in secure mode, so read exactly one
+            // record with readEntry(id); the plaintext lives only as long as this activity.
+            val entry = ClipboardManager.readEntry(id)
+            if (entry == null) {
+                finish()
+                return@launch
+            }
+            setEntry(entry)
         }
     }
 

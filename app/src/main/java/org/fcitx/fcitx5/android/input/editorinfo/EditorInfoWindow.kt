@@ -6,6 +6,7 @@ package org.fcitx.fcitx5.android.input.editorinfo
 
 import android.content.ClipData
 import org.fcitx.fcitx5.android.R
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
 import org.fcitx.fcitx5.android.input.FcitxInputMethodService
 import org.fcitx.fcitx5.android.input.bar.ui.ToolButton
 import org.fcitx.fcitx5.android.input.dependency.inputMethodService
@@ -46,6 +47,12 @@ class EditorInfoWindow : InputWindow.ExtendedInputWindow<EditorInfoWindow>() {
     private val copyButton by lazy {
         ToolButton(context, R.drawable.ic_baseline_content_copy_24, theme).apply {
             setOnClickListener {
+                // Developer inspector output may contain surrounding text from the focused
+                // editor. In secure clipboard mode never write it to the system clipboard.
+                if (ClipboardManager.isSecureMode) {
+                    context.toast(R.string.secure_system_clipboard_blocked)
+                    return@setOnClickListener
+                }
                 val clipData = ClipData.newPlainText("", buildMarkdownString())
                 context.clipboardManager.setPrimaryClip(clipData)
                 context.toast(R.string.done)

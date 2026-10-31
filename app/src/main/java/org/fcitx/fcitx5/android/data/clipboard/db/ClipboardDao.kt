@@ -61,4 +61,15 @@ interface ClipboardDao {
 
     @Query("DELETE FROM ${ClipboardEntry.TABLE_NAME} WHERE deleted=1")
     suspend fun realDelete()
+
+    /** Used only by the one-shot migration into the encrypted database. */
+    @Query("SELECT * FROM ${ClipboardEntry.TABLE_NAME} WHERE deleted=0 ORDER BY id ASC")
+    suspend fun allActiveRows(): List<ClipboardEntry>
+
+    /** Irreversibly wipe the legacy plaintext table after a verified migration. */
+    @Query("DELETE FROM ${ClipboardEntry.TABLE_NAME}")
+    suspend fun deleteAllRows()
+
+    @Query("SELECT COUNT(*) FROM ${ClipboardEntry.TABLE_NAME}")
+    suspend fun rawRowCount(): Int
 }

@@ -5,12 +5,15 @@
 package org.fcitx.fcitx5.android.input.clipboard
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.Intent
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.PopupMenu
 import androidx.annotation.Keep
+import androidx.annotation.StringRes
 import androidx.core.text.bold
 import androidx.core.text.buildSpannedString
 import androidx.core.text.color
@@ -26,6 +29,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.snackbar.SnackbarContentLayout
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
@@ -43,9 +47,13 @@ import org.fcitx.fcitx5.android.input.clipboard.ClipboardStateMachine.Transition
 import org.fcitx.fcitx5.android.input.dependency.inputMethodService
 import org.fcitx.fcitx5.android.input.dependency.theme
 import org.fcitx.fcitx5.android.input.keyboard.KeyboardWindow
+import org.fcitx.fcitx5.android.input.secureclipboard.SecureClipboardPasteController
+import org.fcitx.fcitx5.android.input.secureclipboard.SecurePasteAuthResult
+import org.fcitx.fcitx5.android.input.secureclipboard.SecurePasteResult
 import org.fcitx.fcitx5.android.input.wm.InputWindow
 import org.fcitx.fcitx5.android.input.wm.InputWindowManager
 import org.fcitx.fcitx5.android.utils.AppUtil
+import org.fcitx.fcitx5.android.ui.securecapture.SecureUnlockGate
 import org.fcitx.fcitx5.android.utils.EventStateMachine
 import org.fcitx.fcitx5.android.utils.item
 import org.fcitx.fcitx5.android.utils.styledColorOrDefault
@@ -80,6 +88,38 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
     private val clipboardReturnAfterPaste by prefs.clipboardReturnAfterPaste
     private val clipboardMaskSensitive by prefs.clipboardMaskSensitive
 
+    /**
+     * Decrypts exactly one secure record and commits it through the input connection.
+     *
+     * When "require device authentication before paste" is enabled, the paste goes through the
+     * shared [SecureUnlockGate] first and fails closed (no decryption) when the gate is
+     * unavailable, the user cancels or the system refuses to show the credential prompt.
+     */
+    private val securePasteController by lazy {
+        SecureClipboardPasteController(
+            service = service,
+            readRecordText = { id -> ClipboardManager.readText(id) },
+            requireAuthentication = {
+                AppPrefs.getInstance().security.secureClipboardRequireAuth.getValue()
+            },
+            authenticate = {
+                if (!SecureUnlockGate.isAvailable(context)) {
+                    SecurePasteAuthResult.Unavailable
+                } else {
+                    // Never wait forever for a credential result that the system may drop.
+                    val unlocked = withTimeoutOrNull(DEVICE_AUTH_TIMEOUT_MS) {
+                        SecureUnlockGate.requestUnlock(context)
+                    } ?: false
+                    if (unlocked) {
+                        SecurePasteAuthResult.Success
+                    } else {
+                        SecurePasteAuthResult.Failed
+                    }
+                }
+            },
+        )
+    }
+
     private val clipboardEntryRadius by ThemeManager.prefs.clipboardEntryRadius
 
     private val clipboardEntriesPager by lazy {
@@ -106,6 +146,12 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
             }
 
             override fun onShare(entry: ClipboardEntry) {
+                // Secure records must never be exported: the stored value is ciphertext and the
+                // panel only has a masked label. The menu item is disabled as well.
+                if (entry.secure) {
+                    showMessage(R.string.secure_entry_share_disabled)
+                    return
+                }
                 val target = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, entry.text)
@@ -116,6 +162,10 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
                 service.startActivity(chooser)
             }
 
+            override fun onReveal(id: Int) {
+                revealSecureEntry(id)
+            }
+
             override fun onDelete(id: Int) {
                 service.lifecycleScope.launch {
                     ClipboardManager.delete(id)
@@ -124,6 +174,10 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
             }
 
             override fun onPaste(entry: ClipboardEntry) {
+                if (entry.secure) {
+                    pasteSecureEntry(entry.id)
+                    return
+                }
                 service.commitText(entry.text)
                 if (clipboardReturnAfterPaste) windowManager.attachWindow(KeyboardWindow)
             }
@@ -174,6 +228,78 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
     override fun onCreateView(): View = ui.root
 
     private var promptMenu: PopupMenu? = null
+
+    private var revealDialog: AlertDialog? = null
+
+    /**
+     * Secure entries are ciphertext at rest: decrypt exactly one record, verify that the input
+     * session is still the one the user started from and commit through the input connection.
+     * The system clipboard is never written and the plaintext is not retained.
+     */
+    private fun pasteSecureEntry(id: Int) {
+        service.lifecycleScope.launch {
+            when (securePasteController.paste(id)) {
+                SecurePasteResult.Success -> {
+                    if (clipboardReturnAfterPaste) windowManager.attachWindow(KeyboardWindow)
+                }
+
+                SecurePasteResult.NoInputConnection,
+                SecurePasteResult.SessionChanged,
+                SecurePasteResult.RecordUnavailable,
+                SecurePasteResult.Failed -> showMessage(R.string.secure_paste_failed)
+
+                SecurePasteResult.AuthenticationUnavailable ->
+                    showMessage(R.string.secure_paste_auth_unavailable)
+
+                SecurePasteResult.AuthenticationFailed -> showMessage(R.string.auth_failed)
+            }
+        }
+    }
+
+    /**
+     * One-shot reveal: decrypt a single record on demand and display it in a dialog. The plaintext
+     * is not cached anywhere, and the dialog offers no copy/export action.
+     */
+    private fun revealSecureEntry(id: Int) {
+        service.lifecycleScope.launch {
+            val text = try {
+                ClipboardManager.readText(id)
+            } catch (e: Exception) {
+                null
+            }
+            if (text == null) {
+                showMessage(R.string.secure_paste_failed)
+                return@launch
+            }
+            val dialog = AlertDialog.Builder(context)
+                .setTitle(R.string.secure_entry_reveal)
+                .setMessage(text)
+                .setPositiveButton(android.R.string.ok, null)
+                .create()
+            // The revealed plaintext must not show up in screenshots or the recents thumbnail.
+            dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            dialog.setOnDismissListener {
+                if (revealDialog === dialog) revealDialog = null
+            }
+            revealDialog = dialog
+            try {
+                service.showDialog(dialog)
+            } catch (e: Exception) {
+                revealDialog = null
+                showMessage(R.string.secure_paste_failed)
+            }
+        }
+    }
+
+    private fun showMessage(@StringRes resId: Int) {
+        snackbarInstance?.dismiss()
+        snackbarInstance = Snackbar.make(
+            snackbarCtx, ui.root, context.getString(resId), Snackbar.LENGTH_SHORT
+        )
+            .setBackgroundTint(theme.popupBackgroundColor)
+            .setTextColor(theme.popupTextColor)
+            .apply { show() }
+    }
 
     private fun promptDeleteAll(skipPinned: Boolean) {
         promptMenu?.dismiss()
@@ -262,6 +388,8 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
         stateMachine = ClipboardStateMachine.new(initialState, isEmpty, isListening) {
             ui.switchUiByState(it)
         }
+        // Secure mode shows the encrypted-store empty state instead of the "copy something" hint.
+        ui.emptyUi.setSecureMode(ClipboardManager.isSecureMode)
         // manually switch to initial ui
         ui.switchUiByState(initialState)
         adapter.addLoadStateListener {
@@ -281,6 +409,8 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
         adapter.onDetached()
         adapterSubmitJob?.cancel()
         promptMenu?.dismiss()
+        revealDialog?.dismiss()
+        revealDialog = null
         snackbarInstance?.dismiss()
     }
 
@@ -289,4 +419,9 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
     }
 
     override fun onCreateBarExtension(): View = ui.extension
+
+    companion object {
+        /** Upper bound for the system device-credential prompt before the paste fails closed. */
+        private const val DEVICE_AUTH_TIMEOUT_MS = 120_000L
+    }
 }

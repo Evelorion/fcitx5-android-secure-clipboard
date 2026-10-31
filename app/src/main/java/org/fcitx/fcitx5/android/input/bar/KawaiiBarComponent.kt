@@ -20,12 +20,14 @@ import android.widget.inline.InlineContentView
 import androidx.annotation.Keep
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.core.CapabilityFlag
 import org.fcitx.fcitx5.android.core.CapabilityFlags
@@ -34,6 +36,7 @@ import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.data.prefs.ManagedPreference
+import org.fcitx.fcitx5.android.data.secureclipboard.SecureClipboardError
 import org.fcitx.fcitx5.android.data.theme.ThemeManager
 import org.fcitx.fcitx5.android.input.bar.ExpandButtonStateMachine.State.ClickToAttachWindow
 import org.fcitx.fcitx5.android.input.bar.ExpandButtonStateMachine.State.ClickToDetachWindow
@@ -63,11 +66,15 @@ import org.fcitx.fcitx5.android.input.keyboard.CommonKeyActionListener
 import org.fcitx.fcitx5.android.input.keyboard.CustomGestureView
 import org.fcitx.fcitx5.android.input.keyboard.KeyboardWindow
 import org.fcitx.fcitx5.android.input.popup.PopupComponent
+import org.fcitx.fcitx5.android.input.secureclipboard.SelectedTextCaptureController
+import org.fcitx.fcitx5.android.input.secureclipboard.SelectedTextPolicy
 import org.fcitx.fcitx5.android.input.status.StatusAreaWindow
 import org.fcitx.fcitx5.android.input.wm.InputWindow
 import org.fcitx.fcitx5.android.input.wm.InputWindowManager
+import org.fcitx.fcitx5.android.ui.securecapture.SecureUnlockGate
 import org.fcitx.fcitx5.android.utils.AppUtil
 import org.fcitx.fcitx5.android.utils.InputMethodUtil
+import org.fcitx.fcitx5.android.utils.toast
 import org.mechdancer.dependency.DynamicScope
 import org.mechdancer.dependency.manager.must
 import splitties.bitflags.hasFlag
@@ -105,6 +112,18 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
     private val toolbarNumRowOnPassword by prefs.keyboard.toolbarNumRowOnPassword
     private val showVoiceInputButton by prefs.keyboard.showVoiceInputButton
     private val preferredVoiceInput by prefs.keyboard.preferredVoiceInput
+
+    private val selectedTextCaptureController by lazy {
+        SelectedTextCaptureController(service)
+    }
+
+    /** Whether the shield button should be visible in the current input session. */
+    private var shieldVisibleByMode = false
+
+    /** Whether the focused editor allows saving its selected text (password fields do not). */
+    private var shieldAllowedByEditor = true
+
+    private var hasTextSelection = false
 
     private var clipboardTimeoutJob: Job? = null
 
@@ -306,16 +325,23 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
                 moreButton.setOnClickListener {
                     windowManager.attachWindow(StatusAreaWindow())
                 }
+                shieldButton.setOnClickListener {
+                    captureSelectedText()
+                }
             }
             clipboardUi.suggestionView.apply {
                 setOnClickListener {
-                    ClipboardManager.lastEntry?.let {
-                        service.commitText(it.text)
+                    val entry = ClipboardManager.lastEntry
+                    when {
+                        entry == null -> clearClipboardSuggestion()
+                        // The suggestion of a secure record only holds the masked label, never
+                        // commit it: decrypt exactly one record instead (after optional auth).
+                        entry.secure -> pasteSecureSuggestion(entry.id)
+                        else -> {
+                            service.commitText(entry.text)
+                            clearClipboardSuggestion()
+                        }
                     }
-                    clipboardTimeoutJob?.cancel()
-                    clipboardTimeoutJob = null
-                    isClipboardFresh = false
-                    evalIdleUiState()
                 }
                 setOnLongClickListener {
                     ClipboardManager.lastEntry?.let {
@@ -448,7 +474,19 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
             shouldShowVoiceInput,
             if (shouldShowVoiceInput) switchToVoiceInputCallback else hideKeyboardCallback
         )
+        shieldVisibleByMode = ClipboardManager.isSecureMode && InputMethodUtil.isSelected()
+        shieldAllowedByEditor = SelectedTextPolicy.evaluate(info).allowed
+        hasTextSelection = info.initialSelStart >= 0 && info.initialSelEnd >= 0 &&
+                info.initialSelStart != info.initialSelEnd
+        updateShieldButton()
         evalIdleUiState()
+    }
+
+    override fun onSelectionUpdate(start: Int, end: Int) {
+        val selected = start >= 0 && end >= 0 && start != end
+        if (selected == hasTextSelection) return
+        hasTextSelection = selected
+        updateShieldButton()
     }
 
     override fun onPreeditEmptyStateUpdate(empty: Boolean) {
@@ -536,8 +574,122 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
         }
     }
 
+    /* =================== secure clipboard: toolbar shield / secure suggestion =================== */
+
+    private fun updateShieldButton() {
+        val button = idleUi.buttonsUi.shieldButton
+        if (!shieldVisibleByMode) {
+            button.visibility = View.GONE
+            return
+        }
+        button.visibility = View.VISIBLE
+        // Keep the button clickable so a tap can explain why the action is unavailable; only the
+        // visual emphasis depends on whether the selected text can actually be captured.
+        button.alpha = if (hasTextSelection && shieldAllowedByEditor) 1f else SHIELD_DISABLED_ALPHA
+    }
+
+    private fun captureSelectedText() {
+        selectedTextCaptureController.capture { result ->
+            when (result) {
+                is SelectedTextCaptureController.Result.Saved ->
+                    context.toast(R.string.save_selected_text_saved)
+
+                is SelectedTextCaptureController.Result.Unavailable -> context.toast(
+                    when (result.reason) {
+                        SelectedTextCaptureController.Reason.NotSecureMode ->
+                            R.string.secure_clipboard_need_enable
+
+                        SelectedTextCaptureController.Reason.NoSelection ->
+                            R.string.save_selected_text_no_selection
+
+                        SelectedTextCaptureController.Reason.PasswordField ->
+                            R.string.save_selected_text_password
+
+                        SelectedTextCaptureController.Reason.NoEditor,
+                        SelectedTextCaptureController.Reason.Denied ->
+                            R.string.save_selected_text_failed
+                    }
+                )
+
+                is SelectedTextCaptureController.Result.Failed -> context.toast(
+                    if (result.error == SecureClipboardError.SensitiveRejected) {
+                        R.string.secure_capture_sensitive
+                    } else {
+                        R.string.save_selected_text_failed
+                    }
+                )
+            }
+        }
+    }
+
+    private fun clearClipboardSuggestion() {
+        clipboardTimeoutJob?.cancel()
+        clipboardTimeoutJob = null
+        isClipboardFresh = false
+        evalIdleUiState()
+    }
+
+    private fun pasteSecureSuggestion(id: Int) {
+        val editorBeforeAuth = service.currentInputEditorInfo
+        if (editorBeforeAuth == null || service.currentInputConnection == null) {
+            context.toast(R.string.secure_paste_failed)
+            clearClipboardSuggestion()
+            return
+        }
+        if (!prefs.security.secureClipboardRequireAuth.getValue()) {
+            decryptAndCommitSuggestion(id, editorBeforeAuth)
+            return
+        }
+        if (!SecureUnlockGate.isAvailable(context)) {
+            context.toast(R.string.secure_paste_auth_unavailable)
+            return
+        }
+        SecureUnlockGate.requestUnlock(context) { resultOk ->
+            if (resultOk) {
+                decryptAndCommitSuggestion(id, editorBeforeAuth)
+            } else {
+                context.toast(R.string.auth_failed)
+            }
+        }
+    }
+
+    private fun decryptAndCommitSuggestion(id: Int, editorBeforeAuth: EditorInfo) {
+        service.lifecycleScope.launch {
+            val text = withContext(Dispatchers.IO) {
+                ClipboardManager.readText(id)
+            }
+            if (text == null) {
+                context.toast(R.string.secure_paste_failed)
+                clearClipboardSuggestion()
+                return@launch
+            }
+            // Never commit the plaintext into an editor the user did not tap in. Comparing the
+            // editor identity (not the InputConnection instance) also survives the input restart
+            // caused by the credential prompt.
+            val editorNow = service.currentInputEditorInfo
+            if (service.currentInputConnection == null || !isSameEditor(editorBeforeAuth, editorNow)) {
+                context.toast(R.string.secure_paste_failed)
+                clearClipboardSuggestion()
+                return@launch
+            }
+            // FcitxInputMethodService.commitText keeps composing/selection handling intact.
+            service.commitText(text)
+            clearClipboardSuggestion()
+        }
+    }
+
+    private fun isSameEditor(before: EditorInfo, now: EditorInfo?): Boolean {
+        if (now == null) return false
+        return before.packageName?.toString() == now.packageName?.toString() &&
+                before.inputType == now.inputType &&
+                before.fieldId == now.fieldId
+    }
+
     companion object {
         const val HEIGHT = 40
+
+        /** Visual alpha for the shield button when the current selection cannot be captured. */
+        private const val SHIELD_DISABLED_ALPHA = 0.4f
     }
 
     fun onKeyboardLayoutSwitched(isNumber: Boolean) {

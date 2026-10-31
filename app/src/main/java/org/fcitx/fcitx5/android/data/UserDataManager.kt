@@ -36,14 +36,29 @@ object UserDataManager {
         val exportTime: Long
     )
 
-    private fun writeFileTree(srcDir: File, destPrefix: String, dest: ZipOutputStream) {
+    /**
+     * Clipboard databases are deliberately excluded from user-data export / import:
+     * - the encrypted one is bound to the Android Keystore key of this device and would be
+     *   unreadable (and needlessly exposed) anywhere else;
+     * - the legacy plaintext one may still contain plaintext history.
+     */
+    private fun isClipboardDatabaseFile(name: String): Boolean =
+        name == "clbdb" || name.startsWith("clbdb-") ||
+                name == "secure_clbdb" || name.startsWith("secure_clbdb-")
+
+    private fun writeFileTree(
+        srcDir: File,
+        destPrefix: String,
+        dest: ZipOutputStream,
+        excludes: (String) -> Boolean = { false }
+    ) {
         dest.putNextEntry(ZipEntry("$destPrefix/"))
         srcDir.walkTopDown().forEach { f ->
             val related = f.relativeTo(srcDir)
             if (related.path != "") {
                 if (f.isDirectory) {
                     dest.putNextEntry(ZipEntry("$destPrefix/${related.path}/"))
-                } else if (f.isFile) {
+                } else if (f.isFile && !excludes(f.name)) {
                     dest.putNextEntry(ZipEntry("$destPrefix/${related.path}"))
                     f.inputStream().use { it.copyTo(dest) }
                 }
@@ -61,8 +76,8 @@ object UserDataManager {
         ZipOutputStream(dest.buffered()).use { zipStream ->
             // shared_prefs
             writeFileTree(sharedPrefsDir, "shared_prefs", zipStream)
-            // databases
-            writeFileTree(dataBasesDir, "databases", zipStream)
+            // databases (clipboard databases are excluded, see isClipboardDatabaseFile)
+            writeFileTree(dataBasesDir, "databases", zipStream, ::isClipboardDatabaseFile)
             // external
             writeFileTree(externalDir, "external", zipStream)
             // recently_used moved to SharedPreference and shoud not be exported
@@ -80,11 +95,26 @@ object UserDataManager {
         }
     }
 
-    private fun copyDir(source: File, target: File) {
+    private fun copyDir(
+        source: File,
+        target: File,
+        excludes: (String) -> Boolean = { false }
+    ) {
         val exists = source.exists()
         val isDir = source.isDirectory
         if (exists && isDir) {
-            source.copyRecursively(target, overwrite = true)
+            source.walkTopDown().forEach { src ->
+                val relative = src.relativeTo(source)
+                if (relative.path.isEmpty()) return@forEach
+                if (excludes(src.name)) return@forEach
+                val dest = File(target, relative.path)
+                if (src.isDirectory) {
+                    dest.mkdirs()
+                } else if (src.isFile) {
+                    dest.parentFile?.mkdirs()
+                    src.copyTo(dest, overwrite = true)
+                }
+            }
         } else {
             Timber.w("Cannot import user data: path='${source.path}', exists=$exists, isDir=$isDir")
         }
@@ -100,7 +130,7 @@ object UserDataManager {
                 if (metadata.packageName != BuildConfig.APPLICATION_ID)
                     errorRuntime(R.string.exception_user_data_package_name_mismatch)
                 copyDir(File(tempDir, "shared_prefs"), sharedPrefsDir)
-                copyDir(File(tempDir, "databases"), dataBasesDir)
+                copyDir(File(tempDir, "databases"), dataBasesDir, ::isClipboardDatabaseFile)
                 copyDir(File(tempDir, "external"), externalDir)
                 // keep importing recently_used for backwords compatibility
                 copyDir(File(tempDir, "recently_used"), recentlyUsedDir)

@@ -5,6 +5,7 @@
 package org.fcitx.fcitx5.android.input.bar.ui.idle
 
 import android.content.Context
+import android.view.View
 import androidx.annotation.DrawableRes
 import com.google.android.flexbox.AlignItems
 import com.google.android.flexbox.FlexboxLayout
@@ -46,6 +47,16 @@ class ButtonsBarUi(override val ctx: Context, private val theme: Theme) : Ui {
 
     val moreButton = toolButton(R.drawable.ic_baseline_more_horiz_24).apply {
         contentDescription = ctx.getString(R.string.status_area)
+    }
+
+    /**
+     * Secure capture of the current text selection. Hidden by default; [KawaiiBarComponent]
+     * shows it only when the secure clipboard mode is enabled and the default input method is
+     * active, and dims it when the focused editor does not allow the action.
+     */
+    val shieldButton = toolButton(R.drawable.ic_shield_24).apply {
+        contentDescription = ctx.getString(R.string.secure_capture_shield)
+        visibility = View.GONE
     }
 
 }
