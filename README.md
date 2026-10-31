@@ -5,6 +5,7 @@
 
 - 上游基线：eb5b50216e70484a009933d9519db76005f1faf3（master）
 - 许可证：LGPL-2.1-or-later（与上游一致）
+- 当前版本：**1.2**（更新日志见 [CHANGELOG.md](CHANGELOG.md)）
 - 构建产物：Release 中提供 **release 签名发行包**（arm64-v8a，R8 混淆）与 debug 测试包；均为本机自签，签名密钥不随仓库分发。
 
 > 本仓库文档与代码只描述**相对上游的修改**；上游原有的输入法功能不在这里重复介绍。
@@ -157,7 +158,7 @@
 
 ## 四、实测与交付
 
-- 构建：:app:assembleDebug 成功（arm64-v8a 69,819,756 字节，无 INTERNET 权限）；:app:assembleRelease 成功产出 release 签名发行包（arm64-v8a 54,676,925 字节，R8，无 INTERNET 权限，apksigner v1+v2 通过）；
+- 构建：:app:assembleDebug 成功（arm64-v8a 69,819,756 字节，无 INTERNET 权限）；:app:assembleRelease 成功产出 release 签名发行包（arm64-v8a 54,676,885 字节，R8，无 INTERNET 权限，apksigner v1+v2 通过）；
 - 单测：81 个安全剪贴板 JVM 单测全部通过；
 - 模拟器功能实测：通道 A/B、立即清空、旧明文迁移清库、隐私历史搜索、加密备份导出/导入；
 - 红队：零权限流氓 App 10 项攻击，私有库/IPC/Provider/日志/外部目录/伪造入口均被拦截；安全模式复制后剪贴板读空；
@@ -190,6 +191,7 @@ Release 中同时提供 **release 签名发行包**（R8）与 **debug 测试包
 | [docs/security/08-build-and-test-report.md](docs/security/08-build-and-test-report.md) | 构建与测试报告 |
 | [docs/security/09-rogue-app-red-team.md](docs/security/09-rogue-app-red-team.md) | 红队实测 |
 | [docs/security/evidence/](docs/security/evidence/) | 全部实测证据 |
+| [CHANGELOG.md](CHANGELOG.md) | 版本更新日志 |
 
 ## 七、已知限制
 
