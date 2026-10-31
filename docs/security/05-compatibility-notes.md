@@ -129,3 +129,32 @@
 - 安全摘录 Activity 已设置 `FLAG_SECURE`（`BaseSecureCaptureActivity.kt:64`），并在清单中 `excludeFromRecents`/`autoRemoveFromRecents`（`AndroidManifest.xml:127-128,146-147`）。
 - Android 14+ 的 IME 子类型适配在既有代码中（`input/FcitxInputMethodService.kt:691-697,710-725`），T1 快照未改动该逻辑。
 - 其他兼容性结论（OxygenOS/ColorOS、Android 14/15/16 真机）仍**全部未验证**，第 3 节矩阵与第 5 节限制不变。
+
+## 附录 B：插件兼容性实测（2026-10-31，模拟器）
+
+> 环境：Android 16 x86_64 模拟器，主 APK 为同源码 x86_64 debug 构建；插件为同仓库构建的官方 plugin/clipboard-filter（debug、同签名 dd26a87f…）。
+
+### B.1 结论
+
+- **插件协议兼容**：插件正常绑定 FcitxRemoteService（日志 Bind to plugin → Plugin connected），无 SecurityException；「插件」页显示已加载。
+- **严格模式（安全模式开 + 允许插件关）只有一个有意差异**：clipboard transformer 被移除，插件拿不到剪贴板文本；其他插件能力不变。
+- **安全条目不会镜像到 fcitx 引擎剪贴板**：读取引擎剪贴板的插件看不到安全摘录/安全复制内容（隐私设计）；普通复制仍同步。
+- **签名限制**：官方插件 APK 用官方 release 密钥，无法绑定 debug 主包（signature 级权限）；需用同一密钥构建插件后才可测试/使用。
+
+### B.2 实测矩阵（URL 含 utm_source/utm_medium/fbclid）
+
+| 模式 | 日志 | 存储结果 | 系统剪贴板 |
+| --- | --- | --- | --- |
+| 旧模式（安全关） | Clipboard transformers: 1, strictSecureMode=false | clbdb 中 URL 被过滤为 https://example.com/watch?id=789 | 仍保留原始 URL（旧模式设计） |
+| 安全模式 + 严格 | Clipboard transformers: 1, strictSecureMode=true | secure_clbdb 密文 89B（73 字符原文 + 16B tag，未过滤） | 已清空（红队读取 blocked） |
+| 安全模式 + 允许插件 | Clipboard transformers: 1, strictSecureMode=false | secure_clbdb 密文 48B（32 字符过滤后 URL + 16B tag） | 已清空（红队读取 blocked） |
+
+### B.3 内置附加组件
+
+模拟器「附加组件」页 16 项全部加载（拼音、码表、拼写、标点、剪贴板、Unicode 等），未因本次修改缺失。
+
+### B.4 未验证
+
+官方签名插件 APK、Rime/Anthy/Chewing 等原生插件、多插件并存、插件崩溃/重连、插件配置页深度功能。
+
+证据：`evidence/plugin-compatibility-test.md`。

@@ -1,4 +1,4 @@
-﻿# 08 真实构建与测试报告
+# 08 真实构建与测试报告
 
 > 本文件记录 Lead 在 **2026-10-31** 于本机（Windows + Android SDK）对本次改造工作树实际执行的构建与测试。
 > 所有结果均来自真实命令输出，不含推测；未执行的项目在第 6 节明确列出。
@@ -221,8 +221,26 @@ Set-Location 'D:\KEYBORD\src\fcitx5-android'
 
 > 限制：本轮用硬件按键事件驱动 Fcitx 拼音引擎（该模拟器对 Fcitx 软键盘窗口的触摸注入不生效），真机软键盘打字手感、OEM 输入法切换、插件扩展词库、导入用户数据均未验证。
 
-## 14. 最终状态一句话
+## 14. 插件兼容性实测（2026-10-31 18:1x 补充）
 
-**“可构建、81 个 JVM 单测通过、模拟器上搜索/加密备份/双通道/红队攻击实测完成；真机/OEM 与 instrumented 自动化仍未验证。”**
+用**同一份源码、同一个 debug 签名**构建官方插件 `plugin/clipboard-filter` 并在模拟器安装测试：
+
+- 签名一致（App/插件 SHA-256 均为 `dd26a87f…a24c3602`）；插件「插件」页显示**已加载**，日志 `Bind to plugin: clipboard_filter` → `Plugin connected: clipboard_filter`，无 SecurityException；
+- 三种模式的剪贴板插件行为（测试 URL 含 utm_source/utm_medium/fbclid）：
+
+| 模式 | transformer 日志状态 | 存储结果 | 系统剪贴板 |
+| --- | --- | --- | --- |
+| 旧模式 | `Clipboard transformers: 1, strictSecureMode=false` | clbdb 存 `https://example.com/watch?id=789`（过滤生效） | 保留原始 URL |
+| 安全模式 + 严格 | `Clipboard transformers: 1, strictSecureMode=true` | secure_clbdb 密文 89B = 73 字符原文 + 16B tag（未过滤） | 已清空（红队读取 blocked） |
+| 安全模式 + 允许插件 | `Clipboard transformers: 1, strictSecureMode=false` | secure_clbdb 密文 48B = 32 字符过滤后 URL + 16B tag | 已清空（红队读取 blocked） |
+
+结论：插件协议兼容；严格模式只移除 clipboard transformer（有意隐私差异），其他插件能力不受影响；官方签名插件 APK 无法绑定 debug 包，需同密钥构建。
+
+证据：`evidence/plugin-compatibility-test.md`。
+
+## 15. 最终状态一句话
+
+**“可构建、81 个 JVM 单测通过、模拟器上搜索/加密备份/双通道/红队攻击/词库/插件兼容性实测完成；真机/OEM 与 instrumented 自动化仍未验证。”**
+
 
 
