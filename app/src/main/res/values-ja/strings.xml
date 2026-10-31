@@ -265,7 +265,7 @@
     <string name="secure_clipboard_title_clear">最終クリア</string>
     <string name="secure_clipboard_first_enable_note">有効にすると、クリップボードの履歴がAES -256 - GCMとともにアプリのプライベートストレージに保存されます。通常のコピーは、暗号化された保存が成功した直後にシステムクリップボードから消去されます。システムクリップボードに依存する一部のアプリは動作しなくなる場合があります。これらのアプリには互換性モードを使用してください。</string>
     <string name="secure_clipboard_auto_capture">通常のコピーを保護する</string>
-    <string name="secure_clipboard_auto_capture_summary">システムのクリップボードを聞き、テキストを暗号化して、すぐにクリップボードをクリアします</string>
+    <string name="secure_clipboard_auto_capture_summary">システムのクリップボードを監視し、テキストを暗号化して保存し、成功後すぐにクリアします</string>
     <string name="secure_clipboard_clear_after_save">保存後にシステムクリップボードをクリアする</string>
     <string name="secure_clipboard_mask_history">安全な履歴をマスクする</string>
     <string name="secure_clipboard_allow_plugins">サードパーティのクリップボード変換を許可する</string>
