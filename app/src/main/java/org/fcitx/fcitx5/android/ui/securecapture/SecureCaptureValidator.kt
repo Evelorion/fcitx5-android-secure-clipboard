@@ -45,6 +45,7 @@ object SecureCaptureValidator {
     const val ACTION_SEND = "android.intent.action.SEND"
 
     const val MIME_TYPE_TEXT_PLAIN = "text/plain"
+    const val MIME_TYPE_TEXT_HTML = "text/html"
 
     /** Masking character for the (never plaintext) preview in the confirmation UI. */
     const val MASK_CHAR = '\u2022'
@@ -69,7 +70,7 @@ object SecureCaptureValidator {
         readOnly: Boolean,
     ): SecureCaptureValidation {
         if (action != ACTION_PROCESS_TEXT) return invalid(SecureClipboardError.UnsupportedFormat)
-        if (type != null && !isTextPlain(type)) return invalid(SecureClipboardError.UnsupportedFormat)
+        if (type != null && !isTextType(type)) return invalid(SecureClipboardError.UnsupportedFormat)
         return validateText(rawText, readOnly = readOnly, sensitive = false)
     }
 
@@ -85,7 +86,7 @@ object SecureCaptureValidator {
         sensitive: Boolean,
     ): SecureCaptureValidation {
         if (action != ACTION_SEND) return invalid(SecureClipboardError.UnsupportedFormat)
-        if (type == null || !isTextPlain(type)) return invalid(SecureClipboardError.UnsupportedFormat)
+        if (type == null || !isTextType(type)) return invalid(SecureClipboardError.UnsupportedFormat)
         return validateText(rawText, readOnly = false, sensitive = sensitive)
     }
 
@@ -149,9 +150,9 @@ object SecureCaptureValidator {
     fun maskPreview(text: CharSequence): String =
         MASK_CHAR.toString().repeat(minOf(text.length, MAX_PREVIEW_MASK_LENGTH))
 
-    private fun isTextPlain(type: String): Boolean =
-        type.equals(MIME_TYPE_TEXT_PLAIN, ignoreCase = true) ||
-                type.startsWith("$MIME_TYPE_TEXT_PLAIN;", ignoreCase = true)
+    /** Accept any text MIME type and parameters, not only the exact text/plain value. */
+    private fun isTextType(type: String): Boolean =
+        type.startsWith("text/", ignoreCase = true)
 
     private fun invalid(error: SecureClipboardError): SecureCaptureValidation.Invalid =
         SecureCaptureValidation.Invalid(error)

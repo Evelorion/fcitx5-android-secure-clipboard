@@ -5,7 +5,7 @@
 
 - 上游基线：eb5b50216e70484a009933d9519db76005f1faf3（master）
 - 许可证：LGPL-2.1-or-later（与上游一致）
-- 当前版本：**1.3**（更新日志见 [CHANGELOG.md](CHANGELOG.md)）
+- 当前版本：**1.4**（更新日志见 [CHANGELOG.md](CHANGELOG.md)）
 - 构建产物：Release 中提供 **release 签名发行包**（arm64-v8a，R8 混淆）与 debug 测试包；均为本机自签，签名密钥不随仓库分发。
 
 > 本仓库文档与代码只描述**相对上游的修改**；上游原有的输入法功能不在这里重复介绍。
