@@ -5,7 +5,7 @@
 
 - 上游基线：eb5b50216e70484a009933d9519db76005f1faf3（master）
 - 许可证：LGPL-2.1-or-later（与上游一致）
-- 构建产物：debug 签名（仅测试用，不可上架）；APK 见 Release
+- 构建产物：Release 中提供 **release 签名发行包**（arm64-v8a，R8 混淆）与 debug 测试包；均为本机自签，签名密钥不随仓库分发。
 
 > 本仓库文档与代码只描述**相对上游的修改**；上游原有的输入法功能不在这里重复介绍。
 
@@ -146,7 +146,7 @@
 
 - 官方渠道下载的插件 APK **无法**绑定到本 debug 包（permission denial，属预期）；
 - 要测试插件兼容性，必须用**同一密钥**从本仓库构建插件（本次就是这样验证的）；
-- 正式发布时应保持主应用与插件同签名（官方发布的机制本身如此）。
+- 正式发布时应保持主应用与插件同签名（官方发布的机制本身如此）；本次已用同一 release 密钥构建 clipboard-filter 发行版插件并在 release 主包上验证可加载。
 
 ### 3.5 未验证的插件
 
@@ -156,7 +156,7 @@
 
 ## 四、实测与交付
 
-- 构建：:app:assembleDebug 成功（arm64-v8a 69,819,756 字节，无 INTERNET 权限）；
+- 构建：:app:assembleDebug 成功（arm64-v8a 69,819,756 字节，无 INTERNET 权限）；:app:assembleRelease 成功产出 release 签名发行包（arm64-v8a 54,655,327 字节，R8，无 INTERNET 权限，apksigner v1+v2 通过）；
 - 单测：81 个安全剪贴板 JVM 单测全部通过；
 - 模拟器功能实测：通道 A/B、立即清空、旧明文迁移清库、隐私历史搜索、加密备份导出/导入；
 - 红队：零权限流氓 App 10 项攻击，私有库/IPC/Provider/日志/外部目录/伪造入口均被拦截；安全模式复制后剪贴板读空；
@@ -172,7 +172,7 @@
     Set-Location '<本仓库根目录>'
     gradlew.bat :app:assembleDebug --console=plain -PbuildABI=arm64-v8a -PbuildTools=36.0.0
 
-Release 中的 APK 为 **debug 签名测试构建**；仓库不含任何密钥。正式发布请用自己的 upload key 构建 release 变体，并用同一密钥构建插件。
+Release 中同时提供 **release 签名发行包**（R8）与 **debug 测试包**；仓库不含任何密钥。发行包使用本机 release 密钥签名（与官方 Fcitx5 不同签名，不能覆盖官方版），插件需用同一密钥构建。
 
 ## 六、文档
 

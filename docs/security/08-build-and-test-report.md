@@ -1,4 +1,4 @@
-# 08 真实构建与测试报告
+﻿# 08 真实构建与测试报告
 
 > 本文件记录 维护者 在 **2026-10-31** 于本机（Windows + Android SDK）对本次改造工作树实际执行的构建与测试。
 > 所有结果均来自真实命令输出，不含推测；未执行的项目在第 6 节明确列出。
@@ -238,9 +238,17 @@ Set-Location '<本仓库根目录>'
 
 证据：`evidence/plugin-compatibility-test.md`。
 
-## 15. 最终状态一句话
+## 15. 发行版构建与冒烟测试（2026-10-31 18:3x 补充）
 
-**“可构建、81 个 JVM 单测通过、模拟器上搜索/加密备份/双通道/红队攻击/词库/插件兼容性实测完成；真机/OEM 与 instrumented 自动化仍未验证。”**
+- `:app:assembleRelease` 成功（arm64-v8a）：54,655,327 字节，versionCode 112 / versionName 0.1.3-19-gb64a2990，R8 混淆 + 资源压缩，无 INTERNET 权限；apksigner v1+v2 验证通过，证书为本机 release key（SHA-256 3E:E0:29:DE:…:04:F5）。
+- 同源码 x86_64 release 包在 Android 16 模拟器冒烟：安装启动正常；隐私设置页正常；启用安全模式后“加密存储/密钥”显示 OK、默认输入法 Active；probe 复制 → 系统剪贴板被清空（红队读取 blocked）；隐私历史显示 2 条遮罩记录（无明文）。
+- 词库回归（release 变体）：输入 nihao → 候选 1.你好 / 2.👋 / 3.拟好 / 4.你…，提交得到“你好”，R8 未破坏词典/语言模型。
+- 插件回归（release 变体）：用同一 release 密钥构建官方 plugin/clipboard-filter 发行版，release 主包「插件」页显示 Loaded（签名权限匹配）；官方签名插件仍无法绑定自签发行包。
+- 证据/发行包：GitHub Release `secure-clipboard-v1.1`；调试期证据见 `evidence/`。
+
+## 16. 最终状态一句话
+
+**“可构建（debug + release 签名）、81 个 JVM 单测通过、模拟器上搜索/加密备份/双通道/红队攻击/词库/插件兼容性实测完成；真机/OEM 与 instrumented 自动化仍未验证。”**
 
 
 
