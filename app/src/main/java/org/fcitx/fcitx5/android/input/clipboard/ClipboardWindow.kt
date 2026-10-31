@@ -401,6 +401,11 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
                 adapter.submitData(it)
             }
         }
+        // Recover copies that arrived while the IME process was not listening; rich-text clips
+        // that also carry text/plain are captured as well.
+        service.lifecycleScope.launch {
+            ClipboardManager.syncSecureClipboard()
+        }
         clipboardEnabledPref.registerOnChangeListener(clipboardEnabledListener)
     }
 

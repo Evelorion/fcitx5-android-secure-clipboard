@@ -5,6 +5,7 @@
 package org.fcitx.fcitx5.android.data.clipboard
 
 import android.content.ClipData
+import android.text.Html
 import android.content.ClipDescription
 import android.content.Context
 import android.os.Build
@@ -124,6 +125,24 @@ class SecureClipboardController(
         }
     }
 
+    /**
+     * Re-read the system clipboard once (e.g. when the clipboard panel opens). This recovers
+     * copies that happened while the IME process was not listening and works with rich-text
+     * clips that also carry text/plain.
+     */
+    suspend fun captureCurrentClipboard() {
+        if (!listening) return
+        val parsed = try {
+            parseCurrentClip()
+        } catch (e: Exception) {
+            Timber.w("Secure clipboard: cannot parse current clip (${e.javaClass.simpleName})")
+            return
+        }
+        if (parsed !is ParsedClip.Text) return
+        val result = processor.submit(parsed.toSignal())
+        applyResult(result)
+    }
+
     /* =================== persistence =================== */
 
     private suspend fun persistCapture(text: String, timestamp: Long): SaveResult {
@@ -178,18 +197,26 @@ class SecureClipboardController(
         } catch (e: Exception) {
             return ParsedClip.Unreadable
         }
-        // Only a pure text/plain copy is captured. Mixed clips (text/html + text/plain, URI,
-        // image, ...) are policy rejects so no unexpected content is encrypted.
-        if (mimeTypeCount != 1) {
-            return ParsedClip.Unsupported(UnsupportedReason.NonPlainText)
+        // Many apps copy rich text as text/plain + text/html (and sometimes a URI). Capture the
+        // text part as long as the clip carries plain or HTML text; reject images/URIs/other
+        // content. The secure vault still only stores plain text.
+        var hasText = false
+        for (index in 0 until mimeTypeCount) {
+            when (description.getMimeType(index)) {
+                ClipDescription.MIMETYPE_TEXT_PLAIN,
+                ClipDescription.MIMETYPE_TEXT_HTML -> hasText = true
+            }
         }
-        if (description.getMimeType(0) != ClipDescription.MIMETYPE_TEXT_PLAIN) {
+        if (!hasText) {
             return ParsedClip.Unsupported(UnsupportedReason.NonPlainText)
         }
         if (isSensitive(description)) {
             return ParsedClip.Unsupported(UnsupportedReason.Sensitive)
         }
-        val text = clip.getItemAt(0)?.text?.toString()
+        val item = clip.getItemAt(0)
+        val text = item?.text?.toString()
+            ?: item?.htmlText?.takeIf { it.isNotBlank() }
+                ?.let { Html.fromHtml(it, Html.FROM_HTML_MODE_LEGACY).toString() }
             ?: return ParsedClip.Unsupported(UnsupportedReason.NonPlainText)
         if (text.isBlank()) {
             // A local blank copy is indistinguishable from the pre-API-28 clear fallback

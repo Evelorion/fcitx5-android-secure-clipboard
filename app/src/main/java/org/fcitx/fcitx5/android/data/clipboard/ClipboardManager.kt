@@ -251,6 +251,23 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
 
     /* =================== capturing (channel A) =================== */
 
+    /**
+     * Re-read the system clipboard once, e.g. when the clipboard panel opens. This recovers a
+     * copy that happened while the IME process was not listening (or a rich-text clip that also
+     * carries text/plain). No-op outside secure mode or when auto-capture is disabled.
+     */
+    suspend fun syncSecureClipboard() {
+        if (!isSecureMode) return
+        if (!SecureClipboardVault.isInitialized) return
+        if (!::secureController.isInitialized) return
+        if (!securityPrefs.secureClipboardAutoCapture.getValue()) return
+        try {
+            secureController.captureCurrentClipboard()
+        } catch (e: Exception) {
+            Timber.w("Secure clipboard: manual sync failed (${e.javaClass.simpleName})")
+        }
+    }
+
     /** Unified entry point for all safe-capture channels (PROCESS_TEXT, SEND, IME selection). */
     suspend fun saveSecureCapture(request: CaptureRequest): SaveResult {
         if (!isSecureMode) return SaveResult.Failure(SecureClipboardError.Disabled)
