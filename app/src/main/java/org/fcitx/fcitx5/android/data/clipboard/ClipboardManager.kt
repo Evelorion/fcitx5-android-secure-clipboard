@@ -293,7 +293,11 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
             if (!SecureClipboardVault.isInitialized) EmptyPagingSource()
             else SecureDisplayPagingSource(
                 SecureClipboardVault.repository.allRows(),
-                appContext.getString(R.string.secure_entry_masked)
+                appContext.getString(R.string.secure_entry_masked),
+                // Show real text in the panel by default; masking stays available as an option.
+                if (securityPrefs.secureClipboardMaskHistory.getValue()) null else { id ->
+                    SecureClipboardVault.repository.read(id)?.text
+                }
             )
         } else {
             legacyDao.allEntries()
@@ -558,10 +562,15 @@ private fun SecureClipboardRecord.toDisplayEntry(): ClipboardEntry = ClipboardEn
     type = "text/plain"
 ).apply { secure = true }
 
-/** Paging source that maps encrypted rows to masked display items without decrypting them. */
+/**
+ * Paging source that maps encrypted rows to display items. Decrypts a single visible row on
+ * demand unless the user opted into masked history; the encrypted database is never bulk-decrypted
+ * outside of the current page.
+ */
 private class SecureDisplayPagingSource(
     private val delegate: PagingSource<Int, SecureClipboardEntry>,
-    private val label: String
+    private val label: String,
+    private val decrypt: (suspend (Int) -> String?)? = null
 ) : PagingSource<Int, ClipboardEntry>() {
 
     init {
@@ -573,7 +582,18 @@ private class SecureDisplayPagingSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, ClipboardEntry> =
         when (val result = delegate.load(params)) {
             is LoadResult.Page -> LoadResult.Page(
-                data = result.data.map { it.toDisplayEntry(label) },
+                data = result.data.map { entry ->
+                    val text = if (decrypt == null) {
+                        label
+                    } else {
+                        try {
+                            decrypt(entry.id) ?: label
+                        } catch (e: Exception) {
+                            label
+                        }
+                    }
+                    entry.toDisplayEntry(text)
+                },
                 prevKey = result.prevKey,
                 nextKey = result.nextKey
             )

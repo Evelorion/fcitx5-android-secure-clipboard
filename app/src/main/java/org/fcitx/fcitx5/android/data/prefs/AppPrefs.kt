@@ -389,7 +389,7 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
         val secureClipboardMaskHistory = switch(
             R.string.secure_clipboard_mask_history,
             "secure_clipboard_mask_history",
-            true
+            false
         ) { secureClipboardEnabled.getValue() }
 
         /** Strict mode: when off, third-party clipboard transformers never see raw text. */
